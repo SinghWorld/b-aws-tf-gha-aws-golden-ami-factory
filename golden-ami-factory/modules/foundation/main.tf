@@ -175,7 +175,9 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
       "ec2:DescribeKeyPairs",
       "ec2:DescribeImages",
       "ec2:CreateLaunchTemplate",
-      "ec2:DeleteLaunchTemplate"
+      "ec2:DeleteLaunchTemplate",
+      "ec2:DescribeInstanceTypeOfferings",
+      "ec2:DescribeInstanceTypes"
     ]
     resources = ["*"]
   }
