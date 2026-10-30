@@ -30,17 +30,6 @@ variable "deployment_name" {
   }
 }
 
-variable "deployment_role_name" {
-  description = "Role Terraform assumes in the selected deployment account."
-  type        = string
-  default     = "jcp-superadmin"
-}
-
-variable "assume_role_external_id" {
-  description = "Optional external ID required by the deployment role trust policy."
-  type        = string
-  default     = null
-}
 
 variable "project" {
   type    = string

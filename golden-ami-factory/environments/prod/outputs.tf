@@ -1,13 +1,12 @@
 data "aws_caller_identity" "deployment" {}
 
 output "deployment_target" {
-  description = "Configured AWS account and region Terraform deploys to, including the account ID verified from the assumed role."
+  description = "Configured AWS account and region Terraform deploys to, including the account ID verified from the provider authentication."
   value = {
     name                = var.deployments[var.deployment_name].account_name
     account_id          = var.deployments[var.deployment_name].account_id
     verified_account_id = data.aws_caller_identity.deployment.account_id
     region              = var.deployments[var.deployment_name].aws_region
-    role_arn            = "arn:aws:iam::${var.deployments[var.deployment_name].account_id}:role/${var.deployment_role_name}"
   }
 
   precondition {
