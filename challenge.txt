@@ -1,0 +1,86 @@
+  Other Multi-Account Distribution Challenges (Beyond KMS)
+
+      1. Image Builder Lifecycle Policy Permissions
+
+      - The lifecycle policy runs in the source account with EC2ImageBuilderLifecycleExecutionPolicy
+      - It can only delete AMIs/snapshots in the source account
+      - Target accounts need their own lifecycle policies to clean up copied AMIs
+      - You'll need to deploy lifecycle policies to each target account
+
+      2. AMI Sharing Limits
+
+      - Default limit: 50 accounts per AMI (you're at 10, so OK)
+      - But each AMI version counts separately - 3 versions × 10 accounts = 30 shares
+      - Request quota increase if you plan more accounts/versions
+
+      3. SSM Parameter Replication
+
+      Your config writes SSM params to target accounts:
+      hcl
+      dynamic "ssm_parameter_configuration" {
+        for_each = toset(var.target_account_ids)
+        content { ami_account_id = ssm_parameter_configuration.value ... }
+      }
+      - Requires Image Builder service role to have ssm:PutParameter in target accounts
+      - Target accounts need IAM role trust for imagebuilder.amazonaws.com
+
+4. SNS Notifications
+
+- Build notifications (SNS topic) only exist in source account
+- Target accounts won't get build success/failure alerts
+- Consider SNS cross-account subscriptions or EventBridge for centralized monitoring
+
+5. VPC/Subnet/Security Group Per Account
+
+- Your config uses subnet_id, security_group_id from source account only
+- Build instances run in source account VPC (correct - that's where Image Builder runs)
+- But target accounts need nothing special for distribution itself
+
+6. Launch Template / Instance Profile in Target Accounts
+
+- Not needed for distribution (AMIs are just copied)
+- But if target accounts launch instances, they need their own:
+  - Instance profiles with SSM permissions
+  - Security groups, key pairs
+
+7. Tag Propagation
+
+- Your tags include CreatedBy, CostCentre, etc. with email addresses
+- Target accounts may want different tags (their own cost centers, owners)
+- Image Builder copies tags by default - consider tag transformation
+
+8. Region Constraints
+
+- Your config distributes to same region only (data.aws_region.current.region)
+- For cross-region, you'd need separate distribution configs per region
+
+9. Account ID Validation
+
+- target_account_ids must be valid 12-digit IDs
+- No built-in validation they exist or you have permissions
+
+10. Drift Detection
+
+- No automated way to verify all 10 accounts have the same AMI version
+- Consider a cross-account compliance check (Config rules, custom Lambda)
+
+---
+
+Recommended Additions for 10 Accounts
+
+┌────────────────────┬──────────────────────────────────────────────────────────────────────┐
+│        Need        │                               Solution                               │
+├────────────────────┼──────────────────────────────────────────────────────────────────────┤
+│ Cleanup in targets │ Deploy lifecycle policy module to each target account                │
+├────────────────────┼──────────────────────────────────────────────────────────────────────┤
+│ Monitoring         │ Centralize SNS/EventBridge to one observability account              │
+├────────────────────┼──────────────────────────────────────────────────────────────────────┤
+│ Governance         │ Use AWS Config aggregator or Resource Explorer                       │
+├────────────────────┼──────────────────────────────────────────────────────────────────────┤
+│ Permissions        │ Create IAM role in each target for Image Builder to write SSM params │
+└────────────────────┴──────────────────────────────────────────────────────────────────────┘
+
+Want me to show how to structure the target-account side (lifecycle policy + SSM permissions)?
+
+
+********************************

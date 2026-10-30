@@ -29,3 +29,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "ssm_parameter_prefix" {
+  description = "Prefix for SSM parameter names (e.g., 'golden-ami/windows-2025'). Used to scope IAM permissions."
+  type        = string
+}

@@ -17,3 +17,7 @@ output "sns_topic_arn" {
 output "lifecycle_role_arn" {
   value = aws_iam_role.lifecycle.arn
 }
+
+output "imagebuilder_execution_role_arn" {
+  value = aws_iam_role.imagebuilder_execution.arn
+}

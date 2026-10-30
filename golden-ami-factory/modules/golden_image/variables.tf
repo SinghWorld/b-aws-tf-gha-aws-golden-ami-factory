@@ -159,6 +159,11 @@ variable "lifecycle_role_arn" {
   type        = string
 }
 
+variable "imagebuilder_execution_role_arn" {
+  description = "Execution role ARN for the Image Builder distribution configuration (used for SSM parameter writes)."
+  type        = string
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

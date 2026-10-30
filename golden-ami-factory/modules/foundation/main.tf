@@ -126,3 +126,123 @@ resource "aws_iam_role_policy_attachment" "lifecycle" {
   role       = aws_iam_role.lifecycle.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/EC2ImageBuilderLifecycleExecutionPolicy"
 }
+
+# ---------------------------------------------------------------------------
+# Image Builder execution role (used during image distribution/integration)
+# ---------------------------------------------------------------------------
+# This role replaces the AWSServiceRoleForImageBuilder service-linked role
+# and provides necessary SSM permissions to write the AMI ID to SSM parameters.
+data "aws_iam_policy_document" "imagebuilder_execution" {
+  statement {
+    sid = "SSMPutParameter"
+    actions = [
+      "ssm:PutParameter",
+      "ssm:DeleteParameter",
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+      "ssm:DescribeParameters"
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ssm:*:${data.aws_caller_identity.current.account_id}:parameter${var.ssm_parameter_prefix}/*"
+    ]
+  }
+  statement {
+    sid = "EC2ImageBuilderFullAccess"
+    actions = [
+      "imagebuilder:*"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid = "EC2ActionsForDistribution"
+    actions = [
+      "ec2:CreateImage",
+      "ec2:CopyImage",
+      "ec2:DeregisterImage",
+      "ec2:DescribeImages",
+      "ec2:DescribeSnapshots",
+      "ec2:CreateSnapshot",
+      "ec2:DeleteSnapshot",
+      "ec2:CreateTags",
+      "ec2:DescribeInstances",
+      "ec2:DescribeRegions",
+      "ec2:RunInstances",
+      "ec2:TerminateInstances",
+      "ec2:DescribeInstanceStatus",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeVpcs",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeKeyPairs",
+      "ec2:DescribeImages",
+      "ec2:CreateLaunchTemplate",
+      "ec2:DeleteLaunchTemplate"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid = "KMSForEncryptedAMIs"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:kms:*:${data.aws_caller_identity.current.account_id}:key/*"
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ec2.*.amazonaws.com"]
+    }
+  }
+  statement {
+    sid = "S3LogsAccess"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:GetBucketLocation"
+    ]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}",
+      "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}/*"
+    ]
+  }
+  statement {
+    sid       = "SNSPublish"
+    actions   = ["sns:Publish"]
+    resources = ["arn:${data.aws_partition.current.partition}:sns:*:${data.aws_caller_identity.current.account_id}:*"]
+  }
+  statement {
+    sid    = "IAMPassRole"
+    actions = ["iam:PassRole"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.name_prefix}-build-role"
+    ]
+  }
+  statement {
+    sid    = "IAMGetRole"
+    actions = ["iam:GetRole", "iam:GetInstanceProfile"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.name_prefix}-build-role",
+      "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:instance-profile/${var.name_prefix}-build-profile"
+    ]
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_iam_role" "imagebuilder_execution" {
+  name               = "${var.name_prefix}-imagebuilder-execution-role"
+  description        = "Execution role for EC2 Image Builder image distribution and integration"
+  assume_role_policy = data.aws_iam_policy_document.imagebuilder_trust.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy" "imagebuilder_execution" {
+  name   = "imagebuilder-execution-policy"
+  role   = aws_iam_role.imagebuilder_execution.id
+  policy = data.aws_iam_policy_document.imagebuilder_execution.json
+}

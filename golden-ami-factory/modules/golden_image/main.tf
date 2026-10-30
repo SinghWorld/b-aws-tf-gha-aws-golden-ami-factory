@@ -130,6 +130,7 @@ resource "aws_imagebuilder_image_pipeline" "this" {
   image_recipe_arn                 = aws_imagebuilder_image_recipe.this.arn
   infrastructure_configuration_arn = aws_imagebuilder_infrastructure_configuration.this.arn
   distribution_configuration_arn   = aws_imagebuilder_distribution_configuration.this.arn
+  execution_role                   = var.imagebuilder_execution_role_arn
   enhanced_image_metadata_enabled  = true
   status                           = "ENABLED"
   tags                             = var.tags
