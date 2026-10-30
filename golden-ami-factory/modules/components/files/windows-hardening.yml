@@ -1,0 +1,36 @@
+name: WindowsHardeningExtra
+description: Additional baseline hardening applied after the Amazon STIG component
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: DisableSmb1AndRequireSigning
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force -Confirm:$false
+              Set-SmbServerConfiguration -RequireSecuritySignature $true -Force -Confirm:$false
+              Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart -ErrorAction SilentlyContinue | Out-Null
+      - name: DisableLegacyTlsAndSsl
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              $base = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols'
+              foreach ($proto in 'SSL 2.0','SSL 3.0','TLS 1.0','TLS 1.1') {
+                foreach ($role in 'Server','Client') {
+                  $key = Join-Path $base (Join-Path $proto $role)
+                  New-Item -Path $key -Force | Out-Null
+                  New-ItemProperty -Path $key -Name 'Enabled' -Value 0 -PropertyType DWord -Force | Out-Null
+                  New-ItemProperty -Path $key -Name 'DisabledByDefault' -Value 1 -PropertyType DWord -Force | Out-Null
+                }
+              }
+      - name: DisableGuestAccount
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              Disable-LocalUser -Name 'Guest' -ErrorAction SilentlyContinue

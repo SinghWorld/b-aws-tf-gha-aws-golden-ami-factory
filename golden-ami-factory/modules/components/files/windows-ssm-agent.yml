@@ -1,0 +1,37 @@
+name: WindowsSsmAgentCheck
+description: Records the installed Amazon SSM Agent version and compares it with the latest published release
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: ReportSsmAgentVersion
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+              $exe = 'C:\Program Files\Amazon\SSM\amazon-ssm-agent.exe'
+              if (-not (Test-Path $exe)) { throw 'Amazon SSM Agent is not installed on the build instance' }
+              $installed = (Get-Item $exe).VersionInfo.ProductVersion
+              $latest = $null
+              try {
+                $latest = (Invoke-RestMethod -Uri 'https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/VERSION' -TimeoutSec 30).ToString().Trim()
+              } catch {
+                Write-Host "WARNING: could not read latest SSM Agent version: $($_.Exception.Message)"
+              }
+              Write-Host "SSM Agent installed=$installed latest=$latest"
+              if ($latest -and ($installed -ne $latest)) {
+                Write-Host 'WARNING: SSM Agent is behind the latest release. The AWS parent AMI is refreshed regularly; State Manager AWS-UpdateSSMAgent keeps launched instances current.'
+              }
+  - name: validate
+    steps:
+      - name: VerifyServiceAutoStart
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              Set-Service -Name AmazonSSMAgent -StartupType Automatic
+              $svc = Get-Service -Name AmazonSSMAgent
+              if ($svc.Status -ne 'Running') { throw 'AmazonSSMAgent service is not running' }

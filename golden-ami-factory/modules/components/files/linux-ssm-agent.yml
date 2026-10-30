@@ -1,0 +1,35 @@
+name: LinuxSsmAgentLatest
+description: Installs or upgrades Amazon SSM Agent when it is missing or behind the latest release
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: InstallOrUpgradeSsmAgent
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              set -euo pipefail
+              TOKEN=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H 'X-aws-ec2-metadata-token-ttl-seconds: 300')
+              REGION=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+              INSTALLED=""
+              if rpm -q amazon-ssm-agent >/dev/null 2>&1; then
+                INSTALLED=$(rpm -q --qf '%{VERSION}' amazon-ssm-agent)
+              fi
+              LATEST=$(curl -fsS --retry 3 https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/VERSION 2>/dev/null | tr -d '[:space:]' || true)
+              echo "SSM Agent installed=${INSTALLED:-none} latest=${LATEST:-unknown}"
+              if [ -z "$INSTALLED" ] || { [ -n "$LATEST" ] && [ "$INSTALLED" != "$LATEST" ]; }; then
+                dnf install -y "https://s3.${REGION}.amazonaws.com/amazon-ssm-${REGION}/latest/linux_amd64/amazon-ssm-agent.rpm"
+              fi
+              systemctl enable amazon-ssm-agent
+              systemctl start amazon-ssm-agent || true
+  - name: validate
+    steps:
+      - name: VerifySsmAgent
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              set -euo pipefail
+              systemctl is-enabled amazon-ssm-agent
+              rpm -q amazon-ssm-agent

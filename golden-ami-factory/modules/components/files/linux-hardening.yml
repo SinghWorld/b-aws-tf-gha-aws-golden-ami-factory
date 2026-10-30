@@ -1,0 +1,50 @@
+name: LinuxHardeningExtra
+description: Additional baseline hardening applied after the Amazon STIG component
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: SshdHardening
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              set -euo pipefail
+              install -d -m 0755 /etc/ssh/sshd_config.d
+              cat > /etc/ssh/sshd_config.d/99-golden-hardening.conf <<'CONF'
+              PermitRootLogin no
+              PasswordAuthentication no
+              PermitEmptyPasswords no
+              X11Forwarding no
+              MaxAuthTries 4
+              ClientAliveInterval 300
+              ClientAliveCountMax 1
+              CONF
+              chmod 0600 /etc/ssh/sshd_config.d/99-golden-hardening.conf
+              sshd -t
+      - name: KernelAndFilesystemHardening
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              set -euo pipefail
+              cat > /etc/sysctl.d/99-golden-hardening.conf <<'CONF'
+              net.ipv4.conf.all.accept_redirects = 0
+              net.ipv4.conf.default.accept_redirects = 0
+              net.ipv4.conf.all.send_redirects = 0
+              net.ipv4.conf.all.accept_source_route = 0
+              net.ipv4.tcp_syncookies = 1
+              kernel.randomize_va_space = 2
+              fs.suid_dumpable = 0
+              CONF
+              for fs in cramfs freevxfs hfs hfsplus jffs2; do
+                echo "install ${fs} /bin/false" > "/etc/modprobe.d/99-golden-${fs}.conf"
+              done
+      - name: CleanPackageCache
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              set -euo pipefail
+              dnf clean all
+              rm -rf /var/cache/dnf/*

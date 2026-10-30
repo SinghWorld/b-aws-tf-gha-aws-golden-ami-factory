@@ -1,0 +1,20 @@
+name: WindowsGoldenImageValidation
+description: Post-hardening checks that fail the build if the baseline is not met
+schemaVersion: 1.0
+phases:
+  - name: test
+    steps:
+      - name: ValidateBaseline
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              if ((Get-SmbServerConfiguration).EnableSMB1Protocol) { throw 'SMBv1 is still enabled' }
+              $tls10 = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'
+              if ((Get-ItemProperty -Path $tls10 -Name Enabled).Enabled -ne 0) { throw 'TLS 1.0 is still enabled' }
+              $svc = Get-Service -Name AmazonSSMAgent
+              if ($svc.Status -ne 'Running' -or $svc.StartType -ne 'Automatic') { throw 'SSM Agent is not running/automatic' }
+              Write-Host ('OS: ' + (Get-CimInstance Win32_OperatingSystem).Caption)
+              Write-Host ('SSM Agent: ' + (Get-Item 'C:\Program Files\Amazon\SSM\amazon-ssm-agent.exe').VersionInfo.ProductVersion)
+              Write-Host 'Baseline validation passed'

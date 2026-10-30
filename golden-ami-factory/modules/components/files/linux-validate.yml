@@ -1,0 +1,19 @@
+name: LinuxGoldenImageValidation
+description: Post-hardening checks that fail the build if the baseline is not met
+schemaVersion: 1.0
+phases:
+  - name: test
+    steps:
+      - name: ValidateBaseline
+        action: ExecuteBash
+        inputs:
+          commands:
+            - |
+              set -euo pipefail
+              sshd -T | grep -qi '^permitrootlogin no'
+              sshd -T | grep -qi '^passwordauthentication no'
+              systemctl is-enabled amazon-ssm-agent
+              test "$(sysctl -n kernel.randomize_va_space)" = "2"
+              head -n 3 /etc/os-release
+              rpm -q amazon-ssm-agent
+              echo "Baseline validation passed"
