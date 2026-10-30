@@ -60,7 +60,7 @@ variable "subnet_id" {
 variable "key_pair_name" {
   description = "Existing EC2 key pair name in the deployment account and region for Image Builder instances."
   type        = string
-  default     = "NONPROD_Windows_Key"
+  default     = "MYLABKEY"
 }
 
 variable "log_bucket_name" {
