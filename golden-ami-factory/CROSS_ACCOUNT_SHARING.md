@@ -128,8 +128,3 @@ The Image Builder execution role (created by `foundation` module) needs:
 
 The `foundation` module creates the appropriate IAM policies with cross-account permissions.
 
-## Deprecated: ami_sharing Environment
-
-The `environments/ami_sharing` directory is **deprecated**. It previously used a separate Terraform module to read AMI IDs from SSM and share them post-build. This is no longer needed because Image Builder does it natively during the build.
-
-See `environments/ami_sharing/README.md` for details.
