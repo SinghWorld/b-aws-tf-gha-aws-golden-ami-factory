@@ -80,9 +80,16 @@ variable "root_volume_size" {
   type = number
 }
 
+variable "ebs_encrypted" {
+  description = "Whether to encrypt the EBS volumes and output AMI snapshots. Set to false for no encryption."
+  type        = bool
+  default     = false
+}
+
 variable "kms_key_arn" {
-  description = "EBS KMS key ARN used for build volumes and the output AMI snapshots."
+  description = "EBS KMS key ARN used for build volumes and the output AMI snapshots. Required only when ebs_encrypted = true."
   type        = string
+  default     = ""
 }
 
 variable "instance_types" {

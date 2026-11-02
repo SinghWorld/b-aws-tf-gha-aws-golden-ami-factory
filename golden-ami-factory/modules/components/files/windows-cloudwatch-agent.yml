@@ -1,0 +1,122 @@
+name: WindowsCloudWatchAgent
+description: Installs and configures Amazon CloudWatch Agent on Windows
+schemaVersion: 1.0
+phases:
+  - name: build
+    steps:
+      - name: DownloadCloudWatchAgent
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              $downloadUrl = "https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/amazon-cloudwatch-agent.msi"
+              $installerPath = "C:\Temp\amazon-cloudwatch-agent.msi"
+              New-Item -ItemType Directory -Force -Path "C:\Temp" | Out-Null
+              Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath
+      - name: InstallCloudWatchAgent
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              $installerPath = "C:\Temp\amazon-cloudwatch-agent.msi"
+              Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/qn", "/norestart" -Wait -NoNewWindow
+      - name: ConfigureCloudWatchAgent
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              $configPath = "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
+              $config = @"
+              {
+                "agent": {
+                  "metrics_collection_interval": 60,
+                  "run_as_user": "LocalSystem"
+                },
+                "logs": {
+                  "logs_collected": {
+                    "windows_events": {
+                      "collect_list": [
+                        {
+                          "event_name": "System",
+                          "event_levels": ["ERROR", "WARNING", "CRITICAL"],
+                          "log_group_name": "/aws/ec2/golden-ami",
+                          "log_stream_name": "{instance_id}/System"
+                        },
+                        {
+                          "event_name": "Application",
+                          "event_levels": ["ERROR", "WARNING", "CRITICAL"],
+                          "log_group_name": "/aws/ec2/golden-ami",
+                          "log_stream_name": "{instance_id}/Application"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "metrics": {
+                  "namespace": "CWAgent",
+                  "metrics_collected": {
+                    "LogicalDisk": {
+                      "measurement": [
+                        "% Free Space",
+                        "Free Megabytes"
+                      ],
+                      "metrics_collection_interval": 60,
+                      "resources": ["*"]
+                    },
+                    "Memory": {
+                      "measurement": [
+                        "% Committed Bytes In Use",
+                        "Available MBytes"
+                      ],
+                      "metrics_collection_interval": 60
+                    },
+                    "Network Interface": {
+                      "measurement": [
+                        "Bytes Received/sec",
+                        "Bytes Sent/sec"
+                      ],
+                      "metrics_collection_interval": 60,
+                      "resources": ["*"]
+                    },
+                    "Paging File": {
+                      "measurement": [
+                        "% Usage"
+                      ],
+                      "metrics_collection_interval": 60
+                    },
+                    "Processor": {
+                      "measurement": [
+                        "% Processor Time",
+                        "% Idle Time"
+                      ],
+                      "metrics_collection_interval": 60,
+                      "resources": ["*"]
+                    }
+                  }
+                }
+              }
+              "@
+              Set-Content -Path $configPath -Value $config -Encoding UTF8
+      - name: StartCloudWatchAgent
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -m ec2 -s -c file:"C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
+              Set-Service -Name AmazonCloudWatchAgent -StartupType Automatic
+              Start-Service -Name AmazonCloudWatchAgent
+  - name: validate
+    steps:
+      - name: VerifyCloudWatchAgent
+        action: ExecutePowerShell
+        inputs:
+          commands:
+            - |
+              $ErrorActionPreference = 'Stop'
+              $svc = Get-Service -Name AmazonCloudWatchAgent
+              if ($svc.Status -ne 'Running' -or $svc.StartType -ne 'Automatic') { throw 'CloudWatch Agent is not running/automatic' }
+              Get-Item "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.exe" | Select-Object -ExpandProperty VersionInfo | Select-Object -ExpandProperty ProductVersion

@@ -10,3 +10,8 @@ tfplan
 .terraform.lock.hcl
 *.txt
 CLAUDE_CODE_PROMPT.txt
+graphify-out
+graphify-out/*
+*graphify-out
+.claude
+*.claude/*

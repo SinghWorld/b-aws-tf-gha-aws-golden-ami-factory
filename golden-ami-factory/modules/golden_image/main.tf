@@ -8,7 +8,7 @@ locals {
 
   # Recipes are immutable, so the name carries a hash of everything that defines
   # the recipe. Any change produces a fresh recipe instead of a version clash.
-  recipe_hash = substr(sha1(jsonencode([var.parent_image_arn, var.component_arns, var.stig_level, var.root_volume_size, var.kms_key_arn])), 0, 8)
+  recipe_hash = substr(sha1(jsonencode([var.parent_image_arn, var.component_arns, var.stig_level, var.root_volume_size, var.ebs_encrypted, var.kms_key_arn])), 0, 8)
 }
 
 resource "aws_imagebuilder_image_recipe" "this" {
@@ -22,8 +22,8 @@ resource "aws_imagebuilder_image_recipe" "this" {
     device_name = var.root_device_name
     ebs {
       delete_on_termination = true
-      encrypted             = true
-      kms_key_id            = var.kms_key_arn
+      encrypted             = var.ebs_encrypted
+      kms_key_id            = var.ebs_encrypted ? var.kms_key_arn : null
       volume_size           = var.root_volume_size
       volume_type           = "gp3"
     }
@@ -94,7 +94,7 @@ resource "aws_imagebuilder_distribution_configuration" "this" {
     ami_distribution_configuration {
       name               = local.ami_name
       description        = "${var.display_name} golden image ${var.ami_date_token}.${var.ami_release_version}"
-      kms_key_id         = var.kms_key_arn
+      kms_key_id         = var.ebs_encrypted ? var.kms_key_arn : null
       target_account_ids = length(var.target_account_ids) > 0 ? var.target_account_ids : null
       ami_tags = merge(var.tags, {
         Name        = local.ami_name_tag
