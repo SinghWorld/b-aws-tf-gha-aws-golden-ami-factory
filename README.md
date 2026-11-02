@@ -9,7 +9,7 @@ A Terraform-based solution for building hardened, compliant Golden AMIs using EC
 - **CloudWatch Agent**: Pre-installed and configured for metrics and logs collection
 - **SSM Agent**: Automatic installation and management
 - **Optional EBS Encryption**: Configurable encryption with customer-managed KMS keys
-- **Cross-Account AMI Sharing**: Share built AMIs with multiple AWS accounts
+- **Cross-Account AMI Sharing**: Share built AMIs with multiple AWS accounts (native Image Builder distribution)
 - **Lifecycle Management**: Automatic retention of N newest images
 - **GitHub Actions Integration**: CI/CD pipeline for automated monthly builds
 
@@ -18,26 +18,32 @@ A Terraform-based solution for building hardened, compliant Golden AMIs using EC
 ```
 +---------------------------------------------------------------------------+
 |                      SOURCE ACCOUNT (Build Account)                        |
-|  +-----------------+    +------------------+    +----------------------+  |
-|  |  EC2 Image      |--->|  Distribution    |--->|  SSM Parameter Store |  |
-|  |  Builder        |    |  Configuration   |    |  (Latest AMI IDs)    |  |
-|  +-----------------+    +------------------+    +----------+-----------+  |
-|        |                       |                       |              |
-|        v                       v                       v              |
-|  +---------------------------------------------------------------------------+  |
-|  |                  AMI Sharing Module (Optional)                             |  |
-|  |      Reads AMI IDs from SSM -> Shares with Target Accounts                |  |
-|  +---------------------------------------------------------------------------+  |
+|  +-----------------+    +------------------------------------------+     |
+|  |  EC2 Image      |--->|  Distribution Configuration (Native)     |     |
+|  |  Builder        |    |  - Shares AMI with target accounts       |     |
+|  +-----------------+    |  - Creates SSM params in ALL accounts    |     |
+|                         +----------------------+-------------------+     |
+|                                        |                              |
+|                                        v                              |
+|                         +-----------------------------+              |
+|                         |  SSM Parameter Store        |              |
+|                         |  (Latest AMI IDs)           |              |
+|                         +-----------------------------+              |
 +-------------------------------------------------------------------------------+
                                     |
+                                    |  (Automatic during build)
                                     v
 +---------------------------------------------------------------------------+
 |                      TARGET ACCOUNTS (Multiple)                           |
 |  +--------------+  +--------------+  +--------------+                     |
 |  |  Account A   |  |  Account B   |  |  Account C   |  ...                |
 |  |  (AMI Copy)  |  |  (AMI Copy)  |  |  (AMI Copy)  |                     |
+|  |  (SSM Param) |  |  (SSM Param) |  |  (SSM Param) |                     |
 |  +--------------+  +--------------+  +--------------+                     |
 +---------------------------------------------------------------------------+
+```
+
+**Key**: AMI sharing and SSM parameter creation happen **natively during Image Builder pipeline execution** - no separate Terraform apply needed.
 ```
 
 ## Prerequisites
@@ -172,99 +178,95 @@ See [GitHub Actions Setup](#github-actions-setup) below.
 
 ---
 
-## Cross-Account AMI Sharing
+## Cross-Account AMI Sharing (Native Image Builder)
 
 ### Overview
 
-The AMI sharing feature allows you to share built Golden AMIs with multiple target AWS accounts. This is deployed **in the source/build account** after AMIs are built and their IDs stored in SSM Parameter Store.
+**AMI sharing is now handled natively by AWS Image Builder's distribution configuration** during pipeline execution. No separate Terraform environment or apply is required.
 
-### Step-by-Step: Configure Multiple Target Accounts
+When the Image Builder pipeline runs, it automatically:
+1. **Shares the AMI** with all accounts in `target_account_ids`
+2. **Creates SSM parameters** in each target account (same parameter name, account-specific AMI ID)
 
-#### Step 1: Prepare Target Account IDs
+This is configured entirely in the `prod` environment - single `terraform apply` configures everything.
 
-Collect the 12-digit AWS Account IDs you want to share AMIs with:
+### Configuration
 
-```text
-Account A: 111111111111  (e.g., Development)
-Account B: 222222222222  (e.g., Staging)
-Account C: 333333333333  (e.g., Production)
-```
-
-#### Step 2: Configure ami_sharing Environment
-
-```bash
-cd ../ami_sharing
-```
-
-Create `backend.hcl` (can use same state bucket, different key):
+Set target accounts in `environments/prod/variables.tf` or via `terraform.tfvars`:
 
 ```hcl
-bucket         = "your-terraform-state-bucket"
-key            = "golden-ami-factory/ami-sharing/terraform.tfstate"
-region         = "us-east-1"
-dynamodb_table = "terraform-locks"
-encrypt        = true
-```
-
-Create `terraform.tfvars`:
-
-```hcl
-# Deployment target (same as prod - the SOURCE account)
-deployment_name = "jetstarairwaysnonprod_syd"
-
-# OS keys to share (must match what was built in prod)
-enabled_os = ["rhel-8", "rhel-9", "rhel-10", "windows-2022", "windows-2025"]
-
-# SSM parameter prefix (must match prod)
-ssm_parameter_prefix = "/golden-ami"
-
-# TARGET ACCOUNTS - List of 12-digit AWS Account IDs
+# In terraform.tfvars or environments/prod/variables.tf default
 target_account_ids = [
-  "111111111111",  # Development
-  "222222222222",  # Staging
-  "333333333333",  # Production
+  "774133226694",  # Account A
+  "373160674113",  # Account B
 ]
 ```
 
-#### Step 3: Deploy AMI Sharing
+### Adding More Accounts (Modular Approach)
 
+To add more AWS accounts for AMI distribution:
+
+**Option 1: Update the Default (Recommended for permanent additions)**
+
+Edit `environments/prod/variables.tf` and add the account ID to the default list:
+
+```hcl
+default     = ["774133226694", "373160674113", "NEW_ACCOUNT_ID_HERE"]
+```
+
+Then run:
 ```bash
-terraform init -backend-config=backend.hcl
-terraform plan
+cd environments/prod
 terraform apply
 ```
 
-This will:
-1. Read AMI IDs from SSM parameters (`/golden-ami/{os-key}/latest`)
-2. Create `aws_ec2_ami_launch_permission` resources for each AMI
-3. Grant launch permissions to all target accounts
+The next pipeline execution will automatically share AMIs with the new account.
 
-#### Step 4: Verify in Target Accounts
-
-In each target account, verify the shared AMI is visible:
+**Option 2: Override via Command Line**
 
 ```bash
-# List shared AMIs (run in TARGET account)
+cd environments/prod
+terraform apply -var='target_account_ids=["774133226694", "373160674113", "NEW_ACCOUNT_ID"]'
+```
+
+**Option 3: Override via Environment Variable (For CI/CD)**
+
+```bash
+export TF_VAR_target_account_ids='["774133226694", "373160674113", "NEW_ACCOUNT_ID"]'
+terraform apply
+```
+
+### What Happens Automatically
+
+When the Image Builder pipeline runs:
+
+1. **AMI is built** in the source account (732533289325)
+2. **AMI is shared** with all accounts in `target_account_ids`
+3. **SSM parameter** `/golden-ami/{os_key}/latest` is created in:
+   - The source account
+   - Each target account (same parameter name, account-specific value)
+4. **Lifecycle policy** manages retention in the source account
+
+### Verification
+
+After a pipeline run, verify in each target account:
+
+```bash
+# In target account (e.g., 774133226694)
+aws ssm get-parameter --name "/golden-ami/rhel-9/latest" --region us-east-1
+```
+
+The parameter value will be the AMI ID shared from the source account.
+
+Also verify AMI visibility:
+```bash
+# In target account
 aws ec2 describe-images \
-  --owners 123456789012 \  # Source account ID
+  --owners 732533289325 \  # Source account ID
   --filters "Name=name,Values=jq-golden-ami-*"
 ```
 
 Or via Console: EC2 -> AMIs -> "Private images" -> "Shared with me"
-
-#### Step 5: (Optional) Create SSM Parameters in Target Accounts
-
-Target accounts can create their own SSM parameters pointing to the shared AMIs:
-
-```bash
-# In TARGET account, for each OS:
-aws ssm put-parameter \
-  --name "/golden-ami/rhel-9/latest" \
-  --type "String" \
-  --value "ami-0abcdef1234567890" \
-  --data-type "aws:ec2:image" \
-  --overwrite
-```
 
 ---
 
@@ -317,15 +319,6 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 | `pipeline_schedule_expression` | string | `null` | Cron for scheduled builds |
 | `images_to_retain` | number | `3` | AMIs to retain per OS |
 | `notification_emails` | list(string) | `[]` | SNS notification emails |
-
-### Environment Variables (ami_sharing)
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `deployment_name` | string | `jetstarairwaysnonprod_syd` | Source account deployment |
-| `enabled_os` | list(string) | All 5 OSes | Which AMIs to share |
-| `ssm_parameter_prefix` | string | `/golden-ami` | SSM prefix for AMI IDs |
-| `target_account_ids` | list(string) | **Required** | Target AWS account IDs |
 
 ---
 
@@ -399,12 +392,8 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 ## Cleanup
 
 ```bash
-# Destroy AMI sharing first
-cd environments/ami_sharing
-terraform destroy
-
-# Then destroy prod
-cd ../prod
+# Destroy prod (includes AMI sharing configuration)
+cd environments/prod
 terraform destroy
 ```
 

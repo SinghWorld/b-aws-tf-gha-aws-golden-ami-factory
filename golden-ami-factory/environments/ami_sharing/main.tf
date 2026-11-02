@@ -1,13 +1,17 @@
 # =============================================================================
-# Cross-Account AMI Sharing Configuration
+# Cross-Account AMI Sharing Configuration - DEPRECATED
 # =============================================================================
-# This configuration shares the built Golden AMIs with target AWS accounts.
-# Deploy this in the SOURCE account (where AMIs are built) after the golden_image
-# pipeline has successfully created AMIs and stored their IDs in SSM parameters.
+# ⚠️ THIS ENVIRONMENT IS NO LONGER NEEDED
 #
-# Usage:
-#   terraform init
-#   terraform apply -var="target_account_ids=[\"123456789012\", \"234567890123\"]"
+# AMI sharing is now handled natively by AWS Image Builder's distribution
+# configuration in the prod environment. No separate Terraform apply required.
+#
+# The `golden_image` module's `aws_imagebuilder_distribution_configuration`
+# automatically shares AMIs and creates SSM parameters in target accounts
+# during pipeline execution.
+#
+# Configuration is in: environments/prod/variables.tf -> target_account_ids
+#
 # =============================================================================
 
 module "ami_sharing" {

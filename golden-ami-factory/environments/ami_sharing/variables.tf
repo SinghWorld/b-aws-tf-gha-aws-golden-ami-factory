@@ -1,5 +1,5 @@
 variable "deployments" {
-  description = "AWS accounts and regions that can be selected as Terraform deployment targets."
+  description = "AWS accounts and regions that can be selected as Terraform deployment targets. The account_id should be the SOURCE account where AMIs are built and sharing is initiated from."
   type = map(object({
     account_name = string
     account_id   = string
@@ -8,7 +8,7 @@ variable "deployments" {
   default = {
     jetstarairwaysnonprod_syd = {
       account_name = "Balraj Singh"
-      account_id   = "373160674113"
+      account_id   = "732533289325"  # Development account - source account where AMIs are built
       aws_region   = "us-east-1"
     }
   }
@@ -53,9 +53,9 @@ variable "ssm_parameter_prefix" {
 }
 
 variable "target_account_ids" {
-  description = "AWS account IDs to share the AMIs with. Required for cross-account sharing."
+  description = "AWS account IDs to share the AMIs with. Required for cross-account sharing. NOTE: This environment is deprecated - AMI sharing is now handled natively by Image Builder distribution configuration in the prod environment. No separate apply needed."
   type        = list(string)
-  default     = []
+  default     = ["774133226694", "373160674113"]
 }
 
 variable "extra_tags" {
