@@ -75,8 +75,14 @@ variable "log_bucket_prefix" {
   default     = "golden-ami-factory"
 }
 
+variable "ebs_encrypted" {
+  description = "Whether to encrypt EBS volumes and output AMI snapshots. Set to false for no encryption."
+  type        = bool
+  default     = false
+}
+
 variable "ebs_kms_key_alias" {
-  description = "Alias of the EBS KMS key. alias/aws/ebs works for a single account; use a customer managed key before distributing to other accounts."
+  description = "Alias of the EBS KMS key. alias/aws/ebs works for a single account; use a customer managed key before distributing to other accounts. Only used when ebs_encrypted = true."
   type        = string
   default     = "alias/aws/ebs"
 }

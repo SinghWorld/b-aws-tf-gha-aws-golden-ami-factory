@@ -2,7 +2,8 @@ data "aws_partition" "current" {}
 data "aws_region" "current" {}
 
 data "aws_kms_alias" "ebs" {
-  name = var.ebs_kms_key_alias
+  count = var.ebs_encrypted ? 1 : 0
+  name  = var.ebs_kms_key_alias
 }
 
 locals {
@@ -31,7 +32,7 @@ locals {
 
   enabled_os = { for k, v in local.os_catalog : k => v if contains(var.enabled_os, k) }
 
-  # Order matters: patch, tooling, SSM agent, STIG, extra hardening, then tests.
+  # Order matters: patch, tooling, SSM agent, STIG, extra hardening, CloudWatch Agent, then tests.
   # Current Amazon STIG components accept the level as a recipe parameter;
   # the previous level-suffixed component names are deprecated.
   # Image Builder interprets x.x.x in a component ARN as "use latest version available".
@@ -43,6 +44,7 @@ locals {
       "${local.jq_prefix}:component/stig-build-windows/x.x.x",
       module.components.arns["windows-hardening"],
       module.components.arns["windows-validate"],
+      module.components.arns["windows-cloudwatch-agent"],
       "${local.jq_prefix}:component/simple-boot-test-windows/x.x.x",
     ]
     linux = [
@@ -52,6 +54,7 @@ locals {
       "${local.jq_prefix}:component/stig-build-linux/x.x.x",
       module.components.arns["linux-hardening"],
       module.components.arns["linux-validate"],
+      module.components.arns["linux-cloudwatch-agent"],
       "${local.jq_prefix}:component/simple-boot-test-linux/x.x.x",
     ]
   }

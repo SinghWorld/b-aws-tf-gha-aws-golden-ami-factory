@@ -35,7 +35,8 @@ module "golden_image" {
   stig_component_arn  = "${local.jq_prefix}:component/stig-build-${each.value.family}/x.x.x"
   stig_level          = var.stig_level
   root_volume_size    = each.value.volume_gb
-  kms_key_arn         = data.aws_kms_alias.ebs.target_key_arn
+  ebs_encrypted       = var.ebs_encrypted
+  kms_key_arn         = var.ebs_encrypted ? data.aws_kms_alias.ebs[0].target_key_arn : ""
 
   instance_types                  = each.value.family == "windows" ? var.windows_instance_types : var.linux_instance_types
   subnet_id                       = var.subnet_id

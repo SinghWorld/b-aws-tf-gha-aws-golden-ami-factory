@@ -30,5 +30,5 @@ output "ami_name_templates" {
 }
 
 output "kms_key_arn" {
-  value = data.aws_kms_alias.ebs.target_key_arn
+  value = var.ebs_encrypted ? data.aws_kms_alias.ebs[0].target_key_arn : ""
 }
