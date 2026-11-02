@@ -140,6 +140,7 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
       "ssm:DeleteParameter",
       "ssm:GetParameter",
       "ssm:GetParameters",
+      "ssm:SendCommand",
       "ssm:DescribeParameters"
     ]
     resources = [
@@ -218,14 +219,14 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
     resources = ["arn:${data.aws_partition.current.partition}:sns:*:${data.aws_caller_identity.current.account_id}:*"]
   }
   statement {
-    sid    = "IAMPassRole"
+    sid     = "IAMPassRole"
     actions = ["iam:PassRole"]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.name_prefix}-build-role"
     ]
   }
   statement {
-    sid    = "IAMGetRole"
+    sid     = "IAMGetRole"
     actions = ["iam:GetRole", "iam:GetInstanceProfile"]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.name_prefix}-build-role",
@@ -241,6 +242,14 @@ resource "aws_iam_role" "imagebuilder_execution" {
   description        = "Execution role for EC2 Image Builder image distribution and integration"
   assume_role_policy = data.aws_iam_policy_document.imagebuilder_trust.json
   tags               = var.tags
+}
+
+# Attach AWS managed policy for correct SSM SendCommand permissions
+# This grants the properly-scoped ssm:SendCommand, ssm:GetCommandInvocation,
+# ssm:ListCommandInvocations and other orchestration permissions Image Builder needs.
+resource "aws_iam_role_policy_attachment" "imagebuilder_execution_managed" {
+  role       = aws_iam_role.imagebuilder_execution.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/EC2ImageBuilderExecutionPolicy"
 }
 
 resource "aws_iam_role_policy" "imagebuilder_execution" {
