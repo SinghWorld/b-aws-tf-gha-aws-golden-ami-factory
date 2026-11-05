@@ -159,6 +159,8 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
     actions = [
       "ec2:CreateImage",
       "ec2:CopyImage",
+      "ec2:ModifyImageAttribute",
+      "ec2:ModifySnapshotAttribute",
       "ec2:DeregisterImage",
       "ec2:DescribeImages",
       "ec2:DescribeSnapshots",
