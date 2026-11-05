@@ -8,7 +8,7 @@ variable "deployments" {
   default = {
     jetstarairwaysnonprod_syd = {
       account_name = "Development"
-      account_id   = "732533289325"  # Development account - where AMIs are built
+      account_id   = "732533289325" # Development account - where AMIs are built
       aws_region   = "us-east-1"
     }
   }
@@ -158,12 +158,14 @@ variable "pipeline_schedule_expression" {
 
 variable "windows_instance_types" {
   type    = list(string)
-  default = ["m6i.large", "m5.large"]
+  #default = ["m6i.large", "m5.large"]
+  default = ["t3.large", "t3a.large"]
 }
 
 variable "linux_instance_types" {
   type    = list(string)
-  default = ["m6i.large", "m5.large"]
+  #default = ["m6i.large", "m5.large"]
+  default = ["t3.large", "t3a.large"]
 }
 
 variable "images_to_retain" {
