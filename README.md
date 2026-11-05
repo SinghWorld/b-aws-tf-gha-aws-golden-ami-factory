@@ -6,7 +6,7 @@ A Terraform-based solution for building hardened, compliant Golden AMIs using EC
 
 - **Multi-OS Support**: RHEL 8, 9, 10 and Windows Server 2022, 2025
 - **Security Hardening**: STIG compliance (Low/Medium/High), custom hardening components
-- **CloudWatch Agent**: Pre-installed and configured for metrics and logs collection
+- **CloudWatch Agent**: AWS-managed Image Builder component installs the agent only; configuration is left to the deployment
 - **SSM Agent**: Automatic installation and management
 - **Optional EBS Encryption**: Configurable encryption with customer-managed KMS keys
 - **Cross-Account AMI Sharing**: Share built AMIs with multiple AWS accounts (native Image Builder distribution)
@@ -145,7 +145,8 @@ Creates custom Image Builder components:
 - SSM Agent (Linux/Windows)
 - Hardening (Linux/Windows)
 - Validation (Linux/Windows)
-- CloudWatch Agent (Linux/Windows)
+
+The CloudWatch Agent is installed using AWS-managed Image Builder components and is not included in the custom component module.
 
 ### 6. Deploy Golden Image Pipelines
 
@@ -331,7 +332,7 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 4. `stig-build-linux` - STIG hardening (configurable level)
 5. `linux-hardening` - Extra hardening (SSH, kernel, filesystems)
 6. `linux-validate` - Baseline validation tests
-7. `linux-cloudwatch-agent` - CloudWatch Agent install/config
+7. `amazon-cloudwatch-agent-linux` - AWS-managed CloudWatch Agent installation only
 8. `simple-boot-test-linux` - Boot verification
 
 ### Windows
@@ -341,7 +342,7 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 4. `stig-build-windows` - STIG hardening (configurable level)
 5. `windows-hardening` - Extra hardening (SMB, TLS, Guest)
 6. `windows-validate` - Baseline validation tests
-7. `windows-cloudwatch-agent` - CloudWatch Agent install/config
+7. `amazon-cloudwatch-agent-windows` - AWS-managed CloudWatch Agent installation only
 8. `simple-boot-test-windows` - Boot verification
 
 ---

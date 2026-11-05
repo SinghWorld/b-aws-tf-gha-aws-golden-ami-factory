@@ -50,7 +50,7 @@ locals {
       "${local.jq_prefix}:component/stig-build-windows/x.x.x",
       module.components.arns["windows-hardening"],
       module.components.arns["windows-validate"],
-      local.latest_component_arns["windows-cloudwatch-agent"],
+      "${local.jq_prefix}:component/amazon-cloudwatch-agent-windows/x.x.x",
       "${local.jq_prefix}:component/simple-boot-test-windows/x.x.x",
     ]
     linux = [
@@ -60,7 +60,7 @@ locals {
       "${local.jq_prefix}:component/stig-build-linux/x.x.x",
       module.components.arns["linux-hardening"],
       module.components.arns["linux-validate"],
-      local.latest_component_arns["linux-cloudwatch-agent"],
+      "${local.jq_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x",
       "${local.jq_prefix}:component/simple-boot-test-linux/x.x.x",
     ]
   }

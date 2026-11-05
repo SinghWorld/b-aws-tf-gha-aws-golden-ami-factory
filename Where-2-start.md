@@ -40,12 +40,9 @@ Summary of Changes
 - Modified: environments/prod/locals.tf - KMS alias data source now conditional on ebs_encrypted
 - Modified: environments/prod/outputs.tf - KMS key ARN output now conditional
 
-2. CloudWatch Agent Components Added
+2. AWS-Managed CloudWatch Agent Components
 
-- Created: modules/components/files/linux-cloudwatch-agent.yml - Installs/configures CloudWatch Agent on RHEL
-- Created: modules/components/files/windows-cloudwatch-agent.yml - Installs/configures CloudWatch Agent on Windows
-- Modified: modules/components/main.tf - Added both CloudWatch Agent components to definitions
-- Modified: environments/prod/locals.tf - Added CloudWatch Agent to component chains for both Linux and Windows
+- Modified: environments/prod/locals.tf - Added AWS-managed CloudWatch Agent installation components for Linux and Windows; no agent configuration is applied
 
 3. Cross-Account AMI Sharing - Native Image Builder (NEW)
 

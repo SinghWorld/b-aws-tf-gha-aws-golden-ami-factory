@@ -23,11 +23,9 @@ b-aws-tf-gha-aws-golden-ami-factory/
 │   │   │   ├── variables.tf
 │   │   │   ├── outputs.tf
 │   │   │   └── files/                 # YAML component definitions
-│   │   │       ├── linux-cloudwatch-agent.yml
 │   │   │       ├── linux-hardening.yml
 #   │   │       ├── linux-ssm-agent.yml
 #   │   │       ├── linux-validate.yml
-#   │   │       ├── windows-cloudwatch-agent.yml
 #   │   │       ├── windows-hardening.yml
 #   │   │       ├── windows-ssm-agent.yml
 #   │   │       └── windows-validate.yml
@@ -65,19 +63,18 @@ Creates IAM roles and networking for Image Builder:
 - **Image Builder Execution Role** (`aws_iam_role.imagebuilder_execution`): For distribution, SSM parameter writes, cross-account AMI sharing
 
 ### 2. Components Module (`modules/components`)
-Creates custom Image Builder components (8 total):
+Creates custom Image Builder components (6 total):
 | Component | Platform | Purpose |
 |-----------|----------|---------|
 | `windows-ssm-agent` | Windows | Checks SSM Agent version |
 | `windows-hardening` | Windows | Extra hardening post-STIG |
 | `windows-validate` | Windows | Baseline validation tests |
-| `windows-cloudwatch-agent` | Windows | Installs/configures CloudWatch Agent |
 | `linux-ssm-agent` | Linux | Installs/upgrades SSM Agent on RHEL |
 | `linux-hardening` | Linux | Extra hardening post-STIG |
 | `linux-validate` | Linux | Baseline validation tests |
-| `linux-cloudwatch-agent` | Linux | Installs/configures CloudWatch Agent |
 
 Components use content-hashed names for immutable versioning with `create_before_destroy`.
+CloudWatch Agent installation uses AWS-managed Image Builder components and does not apply agent configuration.
 
 ### 3. Golden Image Module (`modules/golden_image`)
 Creates complete Image Builder pipeline per OS:
@@ -117,7 +114,7 @@ Creates complete Image Builder pipeline per OS:
 4. `stig-build-linux` - STIG hardening
 5. `linux-hardening` - Extra hardening
 6. `linux-validate` - Validation tests
-7. `linux-cloudwatch-agent` - CloudWatch Agent
+7. `amazon-cloudwatch-agent-linux` - AWS-managed CloudWatch Agent installation only
 8. `simple-boot-test-linux` - Boot verification
 
 **Windows:**
@@ -127,7 +124,7 @@ Creates complete Image Builder pipeline per OS:
 4. `stig-build-windows` - STIG hardening
 5. `windows-hardening` - Extra hardening
 6. `windows-validate` - Validation tests
-7. `windows-cloudwatch-agent` - CloudWatch Agent
+7. `amazon-cloudwatch-agent-windows` - AWS-managed CloudWatch Agent installation only
 8. `simple-boot-test-windows` - Boot verification
 
 ## Cross-Account AMI Sharing (Native)
