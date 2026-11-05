@@ -106,9 +106,8 @@ phases:
           commands:
             - |
               $ErrorActionPreference = 'Stop'
-              & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -m ec2 -s -c file:"C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
               Set-Service -Name AmazonCloudWatchAgent -StartupType Automatic
-              Start-Service -Name AmazonCloudWatchAgent
+              & "C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent-ctl.ps1" -a fetch-config -m ec2 -s -c file:"C:\Program Files\Amazon\AmazonCloudWatchAgent\amazon-cloudwatch-agent.json"
   - name: validate
     steps:
       - name: VerifyCloudWatchAgent
