@@ -46,19 +46,15 @@
           <mxGeometry x="20" y="115" width="400" height="50" as="geometry" />
         </mxCell>
 
-        <mxCell id="sns-topic" value="SNS Topic: Build Events&#10;(aws_sns_topic.builds)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;fillColor=#c7d2fe;fontSize=11;align=center;" vertex="1" parent="foundation-box">
-          <mxGeometry x="20" y="180" width="200" height="50" as="geometry" />
-        </mxCell>
-
         <mxCell id="lifecycle-role" value="Lifecycle Role&#10;(aws_iam_role.lifecycle)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;fillColor=#c7d2fe;fontSize=11;align=center;" vertex="1" parent="foundation-box">
-          <mxGeometry x="240" y="180" width="180" height="50" as="geometry" />
+          <mxGeometry x="20" y="180" width="180" height="50" as="geometry" />
         </mxCell>
 
         <mxCell id="exec-role" value="Image Builder Execution Role&#10;(aws_iam_role.imagebuilder_execution)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;fillColor=#c7d2fe;fontSize=11;align=center;" vertex="1" parent="foundation-box">
           <mxGeometry x="20" y="245" width="400" height="50" as="geometry" />
         </mxCell>
 
-        <mxCell id="exec-role-perms" value="Permissions:&#10;• SSM PutParameter (Build + Target Accounts)&#10;• EC2 AMI Operations (Create/Copy/Delete)&#10;• KMS Encrypt/Decrypt (if encrypted)&#10;• S3 Logs Access&#10;• SNS Publish&#10;• IAM PassRole (Build Role)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;fillColor=#fef3c7;fontSize=10;align=left;padding=10;" vertex="1" parent="foundation-box">
+        <mxCell id="exec-role-perms" value="Permissions:&#10;• SSM PutParameter (Build + Target Accounts)&#10;• EC2 AMI Operations (Create/Copy/Delete)&#10;• KMS Encrypt/Decrypt (if encrypted)&#10;• IAM PassRole (Build Role)&#10;• STS AssumeRole (Target Accounts)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;fillColor=#fef3c7;fontSize=10;align=left;padding=10;" vertex="1" parent="foundation-box">
           <mxGeometry x="20" y="310" width="400" height="80" as="geometry" />
         </mxCell>
 
@@ -95,119 +91,95 @@
           <mxGeometry x="20" y="245" width="420" height="40" as="geometry" />
         </mxCell>
 
-        <!-- Golden Image Pipelines Box -->
-        <mxCell id="pipelines-box" value="Golden Image Pipelines (5 OSes)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=13;fontStyle=1;align=center;spacingTop=10;padding=15;" vertex="1" parent="dev-account">
+        <!-- Recipe Registry Module Box (NEW) -->
+        <mxCell id="recipe-registry-box" value="Recipe Registry Module (NEW)&#10;YAML-based Declarative Recipes" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fef3c7;fontSize=13;fontStyle=1;align=center;spacingTop=10;padding=15;" vertex="1" parent="dev-account">
+          <mxGeometry x="500" y="350" width="450" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="recipe-index" value="index.yaml&#10;Recipe Index" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fde68a;fontSize=11;align=center;" vertex="1" parent="recipe-registry-box">
+          <mxGeometry x="20" y="50" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="recipe-rhel10" value="rhel-10.yaml&#10;RHEL 10 Recipe" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fde68a;fontSize=11;align=center;" vertex="1" parent="recipe-registry-box">
+          <mxGeometry x="220" y="50" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="recipe-win25" value="windows-2025.yaml&#10;Windows 2025 Recipe" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fde68a;fontSize=11;align=center;" vertex="1" parent="recipe-registry-box">
+          <mxGeometry x="20" y="115" width="180" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="recipe-note" value="Per-recipe config: STIG level, volume size,&#10;component chain, lifecycle retention, tags" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fef3c7;fontSize=10;align=center;padding=10;" vertex="1" parent="recipe-registry-box">
+          <mxGeometry x="220" y="115" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Golden Image Pipelines Box (2 Active Recipes) -->
+        <mxCell id="pipelines-box" value="Golden Image Pipelines (2 Active Recipes)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=13;fontStyle=1;align=center;spacingTop=10;padding=15;" vertex="1" parent="dev-account">
           <mxGeometry x="970" y="30" width="550" height="650" as="geometry" />
-        </mxCell>
-
-        <!-- RHEL 8 -->
-        <mxCell id="rhel8-box" value="RHEL 8" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#bbf7d0;fontSize=11;fontStyle=1;align=center;spacingTop=5;padding=5;" vertex="1" parent="pipelines-box">
-          <mxGeometry x="10" y="30" width="520" height="115" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel8-recipe" value="Image Recipe (Content-Hashed)&#10;Parent: red-hat-enterprise-linux-8-x86" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel8-box">
-          <mxGeometry x="10" y="35" width="250" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel8-infra" value="Infrastructure Config&#10;Subnet, SG, Key Pair, Instance Types" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel8-box">
-          <mxGeometry x="270" y="35" width="240" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel8-dist" value="Distribution Config&#10;AMI Naming + target_account_ids + SSM Params" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel8-box">
-          <mxGeometry x="10" y="80" width="250" height="35" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel8-pipe" value="Image Pipeline&#10;Links Recipe+Infra+Dist+ExecRole" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel8-box">
-          <mxGeometry x="270" y="80" width="240" height="35" as="geometry" />
-        </mxCell>
-
-        <!-- RHEL 9 -->
-        <mxCell id="rhel9-box" value="RHEL 9" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#bbf7d0;fontSize=11;fontStyle=1;align=center;spacingTop=5;padding=5;" vertex="1" parent="pipelines-box">
-          <mxGeometry x="10" y="155" width="520" height="115" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel9-recipe" value="Image Recipe&#10;Parent: red-hat-enterprise-linux-9-x86" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel9-box">
-          <mxGeometry x="10" y="35" width="250" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel9-infra" value="Infrastructure Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel9-box">
-          <mxGeometry x="270" y="35" width="240" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel9-dist" value="Distribution Config&#10;Cross-Account Sharing + SSM Replication" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel9-box">
-          <mxGeometry x="10" y="80" width="250" height="35" as="geometry" />
-        </mxCell>
-
-        <mxCell id="rhel9-pipe" value="Image Pipeline" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel9-box">
-          <mxGeometry x="270" y="80" width="240" height="35" as="geometry" />
         </mxCell>
 
         <!-- RHEL 10 -->
         <mxCell id="rhel10-box" value="RHEL 10" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#bbf7d0;fontSize=11;fontStyle=1;align=center;spacingTop=5;padding=5;" vertex="1" parent="pipelines-box">
-          <mxGeometry x="10" y="280" width="520" height="115" as="geometry" />
+          <mxGeometry x="10" y="30" width="520" height="150" as="geometry" />
         </mxCell>
 
-        <mxCell id="rhel10-recipe" value="Image Recipe&#10;Parent: red-hat-enterprise-linux-10-x86" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
-          <mxGeometry x="10" y="35" width="250" height="40" as="geometry" />
+        <mxCell id="rhel10-recipe" value="Image Recipe (Content-Hashed)&#10;Parent: red-hat-enterprise-linux-10-x86&#10;Vol: 100GB, STIG: Medium" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
+          <mxGeometry x="10" y="35" width="250" height="55" as="geometry" />
         </mxCell>
 
-        <mxCell id="rhel10-infra" value="Infrastructure Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
+        <mxCell id="rhel10-infra" value="Infrastructure Config&#10;Subnet, SG, Key Pair, Instance Types" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
           <mxGeometry x="270" y="35" width="240" height="40" as="geometry" />
         </mxCell>
 
-        <mxCell id="rhel10-dist" value="Distribution Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
-          <mxGeometry x="10" y="80" width="250" height="35" as="geometry" />
+        <mxCell id="rhel10-dist" value="Distribution Config&#10;AMI Naming + target_account_ids + SSM Params&#10;Cross-Account Sharing (Native)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
+          <mxGeometry x="10" y="95" width="250" height="45" as="geometry" />
         </mxCell>
 
-        <mxCell id="rhel10-pipe" value="Image Pipeline" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
-          <mxGeometry x="270" y="80" width="240" height="35" as="geometry" />
-        </mxCell>
-
-        <!-- Windows 2022 -->
-        <mxCell id="w22-box" value="Windows Server 2022" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#bbf7d0;fontSize=11;fontStyle=1;align=center;spacingTop=5;padding=5;" vertex="1" parent="pipelines-box">
-          <mxGeometry x="10" y="405" width="520" height="115" as="geometry" />
-        </mxCell>
-
-        <mxCell id="w22-recipe" value="Image Recipe&#10;Parent: windows-server-2022-english-full-base-x86" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w22-box">
-          <mxGeometry x="10" y="35" width="250" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="w22-infra" value="Infrastructure Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w22-box">
-          <mxGeometry x="270" y="35" width="240" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="w22-dist" value="Distribution Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w22-box">
-          <mxGeometry x="10" y="80" width="250" height="35" as="geometry" />
-        </mxCell>
-
-        <mxCell id="w22-pipe" value="Image Pipeline" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w22-box">
-          <mxGeometry x="270" y="80" width="240" height="35" as="geometry" />
+        <mxCell id="rhel10-pipe" value="Image Pipeline&#10;Links Recipe+Infra+Dist+ExecRole" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="rhel10-box">
+          <mxGeometry x="270" y="95" width="240" height="45" as="geometry" />
         </mxCell>
 
         <!-- Windows 2025 -->
         <mxCell id="w25-box" value="Windows Server 2025" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#bbf7d0;fontSize=11;fontStyle=1;align=center;spacingTop=5;padding=5;" vertex="1" parent="pipelines-box">
-          <mxGeometry x="10" y="530" width="520" height="115" as="geometry" />
+          <mxGeometry x="10" y="195" width="520" height="150" as="geometry" />
         </mxCell>
 
-        <mxCell id="w25-recipe" value="Image Recipe&#10;Parent: windows-server-2025-english-full-base-x86" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w25-box">
-          <mxGeometry x="10" y="35" width="250" height="40" as="geometry" />
+        <mxCell id="w25-recipe" value="Image Recipe (Content-Hashed)&#10;Parent: windows-server-2025-english-full-base-x86&#10;Vol: 50GB, STIG: Medium" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w25-box">
+          <mxGeometry x="10" y="35" width="250" height="55" as="geometry" />
         </mxCell>
 
         <mxCell id="w25-infra" value="Infrastructure Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w25-box">
           <mxGeometry x="270" y="35" width="240" height="40" as="geometry" />
         </mxCell>
 
-        <mxCell id="w25-dist" value="Distribution Config" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w25-box">
-          <mxGeometry x="10" y="80" width="250" height="35" as="geometry" />
+        <mxCell id="w25-dist" value="Distribution Config&#10;AMI Naming + target_account_ids + SSM Params&#10;Cross-Account Sharing (Native)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w25-box">
+          <mxGeometry x="10" y="95" width="250" height="45" as="geometry" />
         </mxCell>
 
         <mxCell id="w25-pipe" value="Image Pipeline" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#22c55e;fillColor=#dcfce7;fontSize=10;align=center;" vertex="1" parent="w25-box">
-          <mxGeometry x="270" y="80" width="240" height="35" as="geometry" />
+          <mxGeometry x="270" y="95" width="240" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Available Recipes (Not Enabled) -->
+        <mxCell id="available-recipes" value="Available Recipes (Disabled)&#10;rhel-8, rhel-9, windows-2022&#10;Enable via enabled_recipes in tfvars" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#9ca3af;fillColor=#f3f4f6;fontSize=10;align=center;padding=10;" vertex="1" parent="pipelines-box">
+          <mxGeometry x="10" y="360" width="520" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Component Chain Order -->
+        <mxCell id="component-chain" value="Component Chain Execution Order:" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fef3c7;fontSize=11;fontStyle=1;align=left;padding=10;" vertex="1" parent="pipelines-box">
+          <mxGeometry x="10" y="455" width="520" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="chain-linux" value="LINUX: update-linux → aws-cli-v2 → linux-ssm-agent → stig-build-linux → linux-hardening → linux-validate → cloudwatch-agent-linux → boot-test-linux" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fef3c7;fontSize=9;align=left;padding=10;" vertex="1" parent="pipelines-box">
+          <mxGeometry x="10" y="490" width="520" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="chain-windows" value="WINDOWS: update-windows → aws-cli-v2 → windows-ssm-agent → stig-build-windows → windows-hardening → windows-validate → cloudwatch-agent-windows → boot-test-windows" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fef3c7;fontSize=9;align=left;padding=10;" vertex="1" parent="pipelines-box">
+          <mxGeometry x="10" y="545" width="520" height="50" as="geometry" />
         </mxCell>
 
         <!-- AWS Services in Dev Account -->
         <mxCell id="aws-services-box" value="AWS Services (Dev Account)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6b7280;fillColor=#f3f4f6;fontSize=12;fontStyle=1;align=center;spacingTop=10;padding=15;" vertex="1" parent="dev-account">
-          <mxGeometry x="30" y="450" width="450" height="220" as="geometry" />
+          <mxGeometry x="30" y="450" width="450" height="160" as="geometry" />
         </mxCell>
 
         <mxCell id="image-builder" value="EC2 Image Builder Service" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6b7280;fillColor=#e5e7eb;fontSize=11;align=center;" vertex="1" parent="aws-services-box">
@@ -218,20 +190,12 @@
           <mxGeometry x="240" y="30" width="200" height="40" as="geometry" />
         </mxCell>
 
-        <mxCell id="ssm-param-build" value="SSM Parameter Store&#10;/golden-ami/{os}/latest (Build)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6b7280;fillColor=#e5e7eb;fontSize=11;align=center;" vertex="1" parent="aws-services-box">
+        <mxCell id="ssm-param-build" value="SSM Parameter Store&#10;/golden-ami/{recipe}/latest (Build)" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6b7280;fillColor=#e5e7eb;fontSize=11;align=center;" vertex="1" parent="aws-services-box">
           <mxGeometry x="20" y="85" width="200" height="40" as="geometry" />
         </mxCell>
 
-        <mxCell id="s3-logs" value="S3 Bucket: Logs&#10;jcp-infra-nonprod" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6b7280;fillColor=#e5e7eb;fontSize=11;align=center;" vertex="1" parent="aws-services-box">
-          <mxGeometry x="240" y="85" width="200" height="40" as="geometry" />
-        </mxCell>
-
         <mxCell id="kms" value="KMS Key (Optional)&#10;alias/aws/ebs" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6b7280;fillColor=#e5e7eb;fontSize=11;align=center;" vertex="1" parent="aws-services-box">
-          <mxGeometry x="20" y="140" width="200" height="40" as="geometry" />
-        </mxCell>
-
-        <mxCell id="component-chain" value="Component Chain Execution Order:" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#f59e0b;fillColor=#fef3c7;fontSize=11;fontStyle=1;align=left;padding=10;" vertex="1" parent="aws-services-box">
-          <mxGeometry x="20" y="190" width="420" height="30" as="geometry" />
+          <mxGeometry x="240" y="85" width="200" height="40" as="geometry" />
         </mxCell>
 
         <!-- Production Account (Target) -->
@@ -239,11 +203,11 @@
           <mxGeometry x="50" y="1000" width="1500" height="180" as="geometry" />
         </mxCell>
 
-        <mxCell id="prod-ssm" value="SSM Parameter Store&#10;/golden-ami/{os}/latest (Replicated)&#10;Auto-created by Image Builder" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#ef4444;fillColor=#fecaca;fontSize=11;align=center;" vertex="1" parent="prod-account">
+        <mxCell id="prod-ssm" value="SSM Parameter Store&#10;/golden-ami/{recipe}/latest (Replicated)&#10;Auto-created by Image Builder" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#ef4444;fillColor=#fecaca;fontSize=11;align=center;" vertex="1" parent="prod-account">
           <mxGeometry x="500" y="30" width="250" height="70" as="geometry" />
         </mxCell>
 
-        <mxCell id="prod-ami" value="Shared AMIs&#10;Launch Permissions Granted&#10;Tag: GoldenImage={os_key}" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#ef4444;fillColor=#fecaca;fontSize=11;align=center;" vertex="1" parent="prod-account">
+        <mxCell id="prod-ami" value="Shared AMIs&#10;Launch Permissions Granted&#10;Tag: GoldenImage={recipe_key}" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#ef4444;fillColor=#fecaca;fontSize=11;align=center;" vertex="1" parent="prod-account">
           <mxGeometry x="800" y="30" width="250" height="70" as="geometry" />
         </mxCell>
 
@@ -282,6 +246,10 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
+        <mxCell id="edge3b" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=block;dashed=0;fontSize=11;" edge="1" parent="1" source="terraform-cli" target="recipe-registry-box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
         <mxCell id="edge4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=block;dashed=0;fontSize=11;" edge="1" parent="1" source="terraform-cli" target="pipelines-box">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -291,70 +259,75 @@
         </mxCell>
 
         <!-- Foundation to Pipelines -->
-        <mxCell id="edge6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="build-role" target="rhel8-pipe">
+        <mxCell id="edge6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="build-role" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="build-profile" target="rhel8-pipe">
+        <mxCell id="edge7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="build-profile" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="build-sg" target="rhel8-pipe">
+        <mxCell id="edge8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="build-sg" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="sns-topic" target="rhel8-pipe">
+        <mxCell id="edge10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="exec-role" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="exec-role" target="rhel8-pipe">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="edge11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="lifecycle-role" target="rhel8-pipe">
+        <mxCell id="edge11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="lifecycle-role" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Components to Pipelines -->
-        <mxCell id="edge12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="linux-ssm" target="rhel8-pipe">
+        <mxCell id="edge12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="linux-ssm" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="linux-hardening" target="rhel8-pipe">
+        <mxCell id="edge13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="linux-hardening" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="linux-validate" target="rhel8-pipe">
+        <mxCell id="edge14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="linux-validate" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="win-ssm" target="w22-pipe">
+        <mxCell id="edge15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="win-ssm" target="w25-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="win-hardening" target="w22-pipe">
+        <mxCell id="edge16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="win-hardening" target="w25-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="win-validate" target="w22-pipe">
+        <mxCell id="edge17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ec4899;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="win-validate" target="w25-pipe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Recipe Registry to Pipelines -->
+        <mxCell id="edge-rr1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="recipe-rhel10" target="rhel10-pipe">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge-rr2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="recipe-win25" target="w25-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Pipeline Internal Flow -->
-        <mxCell id="edge18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-recipe" target="rhel8-pipe">
+        <mxCell id="edge18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-recipe" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-infra" target="rhel8-pipe">
+        <mxCell id="edge19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-infra" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-dist" target="rhel8-pipe">
+        <mxCell id="edge20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-dist" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Runtime Flow: Pipeline -> Image Builder -> EC2 -->
-        <mxCell id="edge21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6b7280;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-pipe" target="image-builder">
+        <mxCell id="edge21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6b7280;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-pipe" target="image-builder">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -387,36 +360,23 @@
         </mxCell>
 
         <!-- Distribution Flow -->
-        <mxCell id="edge29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="image-builder" target="rhel8-dist">
+        <mxCell id="edge29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="image-builder" target="rhel10-dist">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-dist" target="prod-ami">
+        <mxCell id="edge30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-dist" target="prod-ami">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6b7280;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-dist" target="ssm-param-build">
+        <mxCell id="edge31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6b7280;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-dist" target="ssm-param-build">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;endArrow=block;dashed=1;fontSize=11;" edge="1" parent="1" source="rhel8-dist" target="prod-ssm">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Logging & Notifications -->
-        <mxCell id="edge33" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6b7280;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="ec2-build" target="s3-logs">
+        <mxCell id="edge32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ef4444;strokeWidth=2;endArrow=block;dashed=1;fontSize=11;" edge="1" parent="1" source="rhel10-dist" target="prod-ssm">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <mxCell id="edge34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6b7280;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="ec2-build" target="kms">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="edge35" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="image-builder" target="sns-topic">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="edge36" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f59e0b;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="sns-topic" target="github-actions">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -437,24 +397,16 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge41" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="exec-role" target="s3-logs">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <mxCell id="edge42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="exec-role" target="sns-topic">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
         <mxCell id="edge43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="exec-role" target="build-role">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Lifecycle -->
-        <mxCell id="edge44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="lifecycle-role" target="rhel8-pipe">
+        <mxCell id="edge44" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="lifecycle-role" target="rhel10-pipe">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="edge45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel8-pipe" target="image-builder">
+        <mxCell id="edge45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=2;endArrow=block;fontSize=11;" edge="1" parent="1" source="rhel10-pipe" target="image-builder">
           <mxGeometry relative="1" as="geometry" >
             <mxPoint x="1520" y="150" as="sourcePoint" />
             <mxPoint x="50" y="480" as="targetPoint" />
@@ -492,6 +444,10 @@
 
         <mxCell id="label8" value="Native Image Builder&#10;target_account_ids" style="html=1;fontSize=10;strokeColor=#f59e0b;fillColor=#fef3c7;align=center;" vertex="1" parent="edge30">
           <mxGeometry x="1.2" y="0" relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="label9" value="Declarative&#10;Recipes" style="html=1;fontSize=10;strokeColor=#f59e0b;fillColor=#fef3c7;align=center;" vertex="1" parent="edge-rr1">
+          <mxGeometry x="0.5" y="-15" relative="1" as="geometry" />
         </mxCell>
 
       </root>
