@@ -1,0 +1,80 @@
+# RHEL 8 STIG Medium Recipe
+# Golden AMI recipe for Red Hat Enterprise Linux 8 with STIG Medium compliance
+
+name: "RHEL 8 Golden Image"
+description: "Hardened RHEL 8 image with STIG Medium compliance, SSM Agent, CloudWatch Agent, and validation tests"
+
+os_family: "linux"
+
+# Parent image: AWS-managed RHEL 8 base image
+# Uses x.x.x to always pick the latest available version
+parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-8-x86/x.x.x"
+
+# STIG component ARN (AWS-managed)
+stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+
+# STIG level: low, medium, or high
+stig_level: "medium"
+
+# Root volume configuration
+root_volume_size: 100
+root_device_name: "/dev/xvda"
+ebs_encrypted: false
+kms_key_arn: ""
+
+# Component chain - order matters!
+# Each component can be:
+# - AWS-managed: use ${aws_managed_components_prefix}:component/name/x.x.x
+# - Custom: reference from custom_components_arns map (e.g., custom_components_arns["linux-ssm-agent"])
+component_chain:
+  # 1. OS patches
+  - arn: "${aws_managed_components_prefix}:component/update-linux/x.x.x"
+    phase: "build"
+
+  # 2. AWS CLI v2
+  - arn: "${aws_managed_components_prefix}:component/aws-cli-version-2-linux/x.x.x"
+    phase: "build"
+
+  # 3. SSM Agent (custom component)
+  - arn: "${custom_components_arns["linux-ssm-agent"]}"
+    phase: "build"
+
+  # 4. STIG hardening (AWS-managed, receives stig_level parameter)
+  - arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+    phase: "build"
+    parameters:
+      Level: "Medium"
+
+  # 5. Extra hardening (custom component)
+  - arn: "${custom_components_arns["linux-hardening"]}"
+    phase: "build"
+
+  # 6. Validation tests (custom component)
+  - arn: "${custom_components_arns["linux-validate"]}"
+    phase: "test"
+
+  # 7. CloudWatch Agent (AWS-managed)
+  - arn: "${aws_managed_components_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
+    phase: "build"
+
+  # 8. Boot verification (AWS-managed)
+  - arn: "${aws_managed_components_prefix}:component/simple-boot-test-linux/x.x.x"
+    phase: "test"
+
+# Optional: Additional block device mappings
+block_device_mappings: []
+
+# Optional: AMI name suffix (added to default naming)
+ami_name_suffix: ""
+
+# Optional: Additional distribution regions (empty = build region only)
+distribution_regions: []
+
+# Optional: Lifecycle policy - number of AMIs to retain
+lifecycle_policy_count: 3
+
+# Optional: Additional tags
+tags:
+  Compliance: "STIG-Medium"
+  OSFamily: "Linux"
+  BaseOS: "RHEL-8"

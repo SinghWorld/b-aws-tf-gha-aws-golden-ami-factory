@@ -125,6 +125,43 @@ The Image Builder execution role (created by `foundation` module) needs:
 
 - `ec2:ModifyImageAttribute` on the AMI (for sharing)
 - `ssm:PutParameter` in target accounts (for SSM parameters)
+- `sts:AssumeRole` on the distribution role in each target account
 
-The `foundation` module creates the appropriate IAM policies with cross-account permissions.
+The `foundation` module **dynamically generates** the cross-account assume role permissions based on `var.target_account_ids`. No code changes needed when adding/removing accounts.
+
+## Target Account Prerequisites
+
+Each target account **must** have the following IAM role for Image Builder to assume during distribution:
+
+```hcl
+# In TARGET ACCOUNT (e.g., 774133226694, 373160674113):
+resource "aws_iam_role" "imagebuilder_distribution_cross_account" {
+  name = "EC2ImageBuilderDistributionCrossAccountRole"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::SOURCE_ACCOUNT_ID:root" }
+      Action    = "sts:AssumeRole"
+      Condition = {
+        StringEquals = {
+          "sts:ExternalId" = "imagebuilder-distribution"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "distribution" {
+  role       = aws_iam_role.imagebuilder_distribution_cross_account.name
+  policy_arn = "arn:aws:iam::aws:policy/EC2ImageBuilderDistributionCrossAccountRolePolicy"
+}
+```
+
+**Required AWS Managed Policy:** `EC2ImageBuilderDistributionCrossAccountRolePolicy` (or equivalent custom policy with `ec2:ModifyImageAttribute`, `ec2:CopyImage`, `ssm:PutParameter` on target account resources).
+
+### Automated Target Account Setup (Optional)
+
+For enterprise deployments, consider using **AWS Organizations** + **StackSets** to automatically deploy the cross-account role to all accounts tagged with `GoldenAMI = true`.
 

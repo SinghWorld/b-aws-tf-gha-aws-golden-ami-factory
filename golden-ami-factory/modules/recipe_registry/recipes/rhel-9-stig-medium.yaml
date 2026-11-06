@@ -1,0 +1,46 @@
+# RHEL 9 STIG Medium Recipe
+# Golden AMI recipe for Red Hat Enterprise Linux 9 with STIG Medium compliance
+
+name: "RHEL 9 Golden Image"
+description: "Hardened RHEL 9 image with STIG Medium compliance, SSM Agent, CloudWatch Agent, and validation tests"
+
+os_family: "linux"
+
+parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-9-x86/x.x.x"
+stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+stig_level: "medium"
+
+root_volume_size: 100
+root_device_name: "/dev/xvda"
+ebs_encrypted: false
+kms_key_arn: ""
+
+component_chain:
+  - arn: "${aws_managed_components_prefix}:component/update-linux/x.x.x"
+    phase: "build"
+  - arn: "${aws_managed_components_prefix}:component/aws-cli-version-2-linux/x.x.x"
+    phase: "build"
+  - arn: "${custom_components_arns["linux-ssm-agent"]}"
+    phase: "build"
+  - arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+    phase: "build"
+    parameters:
+      Level: "Medium"
+  - arn: "${custom_components_arns["linux-hardening"]}"
+    phase: "build"
+  - arn: "${custom_components_arns["linux-validate"]}"
+    phase: "test"
+  - arn: "${aws_managed_components_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
+    phase: "build"
+  - arn: "${aws_managed_components_prefix}:component/simple-boot-test-linux/x.x.x"
+    phase: "test"
+
+block_device_mappings: []
+ami_name_suffix: ""
+distribution_regions: []
+lifecycle_policy_count: 3
+
+tags:
+  Compliance: "STIG-Medium"
+  OSFamily: "Linux"
+  BaseOS: "RHEL-9"

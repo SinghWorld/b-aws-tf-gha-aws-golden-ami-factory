@@ -151,11 +151,14 @@ resource "aws_imagebuilder_image_pipeline" "this" {
 }
 
 # Keep the newest N images per OS and delete older AMIs with their snapshots.
-resource "aws_imagebuilder_lifecycle_policy" "this" {
-  count = var.images_to_retain > 0 ? 1 : 0
+# Always create the lifecycle policy; Image Builder handles 0 as disabled
+locals {
+  lifecycle_count = var.images_to_retain != null && var.images_to_retain > 0 ? var.images_to_retain : 3
+}
 
+resource "aws_imagebuilder_lifecycle_policy" "this" {
   name           = local.base_name
-  description    = "Retain the newest ${var.images_to_retain} ${var.display_name} images"
+  description    = "Retain the newest ${local.lifecycle_count} ${var.display_name} images"
   execution_role = var.lifecycle_role_arn
   resource_type  = "AMI_IMAGE"
   tags           = var.tags
@@ -170,7 +173,7 @@ resource "aws_imagebuilder_lifecycle_policy" "this" {
     }
     filter {
       type  = "COUNT"
-      value = var.images_to_retain
+      value = local.lifecycle_count
     }
   }
 

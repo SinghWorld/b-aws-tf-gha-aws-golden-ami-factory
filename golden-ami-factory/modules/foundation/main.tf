@@ -184,13 +184,13 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
     ]
     resources = ["*"]
   }
-  statement {
-    sid     = "AllowAssumeDistributionCrossAccountRole"
-    actions = ["sts:AssumeRole"]
-    resources = [
-      "arn:aws:iam::373160674113:role/EC2ImageBuilderDistributionCrossAccountRole",
-      "arn:aws:iam::774133226694:role/EC2ImageBuilderDistributionCrossAccountRole"
-    ]
+  dynamic "statement" {
+    for_each = length(var.target_account_ids) > 0 ? [1] : []
+    content {
+      sid     = "AllowAssumeDistributionCrossAccountRole"
+      actions = ["sts:AssumeRole"]
+      resources = [for account_id in var.target_account_ids : "arn:${data.aws_partition.current.partition}:iam::${account_id}:role/EC2ImageBuilderDistributionCrossAccountRole"]
+    }
   }
   statement {
     sid = "KMSForEncryptedAMIs"

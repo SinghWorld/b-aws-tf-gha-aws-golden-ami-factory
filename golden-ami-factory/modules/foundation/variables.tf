@@ -34,3 +34,9 @@ variable "ssm_parameter_prefix" {
   description = "Prefix for SSM parameter names (e.g., 'golden-ami/windows-2025'). Used to scope IAM permissions."
   type        = string
 }
+
+variable "target_account_ids" {
+  description = "Target AWS account IDs for cross-account AMI distribution. Used to grant Image Builder execution role permission to assume distribution roles in target accounts."
+  type        = list(string)
+  default     = []
+}

@@ -37,7 +37,7 @@ variable "project" {
 }
 
 variable "enabled_os" {
-  description = "Which images to build."
+  description = "Which images to build (legacy - use enabled_recipes for new recipe registry)."
   type        = list(string)
   default     = ["rhel-8", "rhel-9", "rhel-10", "windows-2022", "windows-2025"]
 
@@ -45,6 +45,12 @@ variable "enabled_os" {
     condition     = length(var.enabled_os) == length(distinct(var.enabled_os)) && alltrue([for o in var.enabled_os : contains(["rhel-8", "rhel-9", "rhel-10", "windows-2022", "windows-2025"], o)])
     error_message = "enabled_os must contain unique supported keys: rhel-8, rhel-9, rhel-10, windows-2022, windows-2025."
   }
+}
+
+variable "enabled_recipes" {
+  description = "Recipe keys to enable from the recipe registry. Empty means all recipes in index.yaml. Example: ['rhel-9-stig-medium', 'windows-2025-stig-medium']"
+  type        = list(string)
+  default     = []
 }
 
 variable "vpc_id" {
@@ -157,13 +163,13 @@ variable "pipeline_schedule_expression" {
 }
 
 variable "windows_instance_types" {
-  type    = list(string)
+  type = list(string)
   #default = ["m6i.large", "m5.large"]
   default = ["t3.large", "t3a.large"]
 }
 
 variable "linux_instance_types" {
-  type    = list(string)
+  type = list(string)
   #default = ["m6i.large", "m5.large"]
   default = ["t3.large", "t3a.large"]
 }

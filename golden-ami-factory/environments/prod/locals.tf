@@ -28,6 +28,8 @@ locals {
     key => replace(arn, "//[0-9]+\\.[0-9]+\\.[0-9]+(/[0-9]+)?$/", "/x.x.x")
   }
 
+  # LEGACY: OS catalog for backward compatibility with enabled_os variable
+  # New deployments should use recipe_registry module with enabled_recipes
   os_catalog = {
     "rhel-8"       = { family = "linux", display = "RHEL 8", ami_os_code = "rhel8", parent = "red-hat-enterprise-linux-8-x86", volume_gb = 100 }
     "rhel-9"       = { family = "linux", display = "RHEL 9", ami_os_code = "rhel9", parent = "red-hat-enterprise-linux-9-x86", volume_gb = 100 }
@@ -38,10 +40,8 @@ locals {
 
   enabled_os = { for k, v in local.os_catalog : k => v if contains(var.enabled_os, k) }
 
-  # Order matters: patch, tooling, SSM agent, STIG, extra hardening, CloudWatch Agent, then tests.
-  # Current Amazon STIG components accept the level as a recipe parameter;
-  # the previous level-suffixed component names are deprecated.
-  # Image Builder interprets x.x.x in a component ARN as "use latest version available".
+  # LEGACY: Component chains for backward compatibility
+  # New deployments use recipe_registry module with declarative YAML recipes
   component_chain = {
     windows = [
       "${local.jq_prefix}:component/update-windows/x.x.x",

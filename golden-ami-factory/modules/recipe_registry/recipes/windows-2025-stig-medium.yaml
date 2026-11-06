@@ -1,0 +1,46 @@
+# Windows Server 2025 STIG Medium Recipe
+# Golden AMI recipe for Windows Server 2025 with STIG Medium compliance
+
+name: "Windows Server 2025 Golden Image"
+description: "Hardened Windows Server 2025 image with STIG Medium compliance, SSM Agent, CloudWatch Agent, and validation tests"
+
+os_family: "windows"
+
+parent_image_arn: "${aws_managed_components_prefix}:image/windows-server-2025-english-full-base-x86/x.x.x"
+stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-windows/x.x.x"
+stig_level: "medium"
+
+root_volume_size: 50
+root_device_name: "/dev/sda1"
+ebs_encrypted: false
+kms_key_arn: ""
+
+component_chain:
+  - arn: "${aws_managed_components_prefix}:component/update-windows/x.x.x"
+    phase: "build"
+  - arn: "${aws_managed_components_prefix}:component/aws-cli-version-2-windows/x.x.x"
+    phase: "build"
+  - arn: "${custom_components_arns["windows-ssm-agent"]}"
+    phase: "build"
+  - arn: "${aws_managed_components_prefix}:component/stig-build-windows/x.x.x"
+    phase: "build"
+    parameters:
+      Level: "Medium"
+  - arn: "${custom_components_arns["windows-hardening"]}"
+    phase: "build"
+  - arn: "${custom_components_arns["windows-validate"]}"
+    phase: "test"
+  - arn: "${aws_managed_components_prefix}:component/amazon-cloudwatch-agent-windows/x.x.x"
+    phase: "build"
+  - arn: "${aws_managed_components_prefix}:component/simple-boot-test-windows/x.x.x"
+    phase: "test"
+
+block_device_mappings: []
+ami_name_suffix: ""
+distribution_regions: []
+lifecycle_policy_count: 3
+
+tags:
+  Compliance: "STIG-Medium"
+  OSFamily: "Windows"
+  BaseOS: "Windows-2025"
