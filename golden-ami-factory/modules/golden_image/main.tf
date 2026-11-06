@@ -65,7 +65,6 @@ resource "aws_imagebuilder_infrastructure_configuration" "this" {
   key_pair                      = var.key_pair_name
   subnet_id                     = var.subnet_id
   security_group_ids            = [var.security_group_id]
-  sns_topic_arn                 = var.sns_topic_arn
   terminate_instance_on_failure = true
   resource_tags                 = local.imagebuilder_tags
   tags                          = var.tags
@@ -73,13 +72,6 @@ resource "aws_imagebuilder_infrastructure_configuration" "this" {
   instance_metadata_options {
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
-  }
-
-  logging {
-    s3_logs {
-      s3_bucket_name = var.log_bucket_name
-      s3_key_prefix  = "${var.log_bucket_prefix}/${var.os_key}"
-    }
   }
 }
 

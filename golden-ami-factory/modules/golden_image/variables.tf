@@ -113,21 +113,6 @@ variable "instance_profile_name" {
   type = string
 }
 
-variable "sns_topic_arn" {
-  type    = string
-  default = null
-}
-
-variable "log_bucket_name" {
-  description = "Name of the existing S3 bucket where Image Builder writes logs."
-  type        = string
-}
-
-variable "log_bucket_prefix" {
-  description = "Base S3 key prefix for Image Builder logs."
-  type        = string
-}
-
 variable "ssm_parameter_name" {
   description = "SSM parameter that always holds the newest AMI ID for this image."
   type        = string

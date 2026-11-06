@@ -1,9 +1,5 @@
 data "aws_partition" "current" {}
 
-locals {
-  logs_bucket_arn = "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}"
-}
-
 # ---------------------------------------------------------------------------
 # Build instance role + profile
 # ---------------------------------------------------------------------------
@@ -39,20 +35,6 @@ resource "aws_iam_role_policy_attachment" "image_builder_ecr_container_builds" {
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
 }
 
-data "aws_iam_policy_document" "build_logs" {
-  statement {
-    sid       = "WriteBuildLogs"
-    actions   = ["s3:PutObject"]
-    resources = ["${local.logs_bucket_arn}/${var.log_bucket_prefix}/*"]
-  }
-}
-
-resource "aws_iam_role_policy" "build_logs" {
-  name   = "write-build-logs"
-  role   = aws_iam_role.build.id
-  policy = data.aws_iam_policy_document.build_logs.json
-}
-
 resource "aws_iam_instance_profile" "build" {
   name = "${var.name_prefix}-build-profile"
   role = aws_iam_role.build.name
@@ -71,7 +53,7 @@ resource "aws_security_group" "build" {
 
 resource "aws_vpc_security_group_egress_rule" "https" {
   security_group_id = aws_security_group.build.id
-  description       = "HTTPS to SSM, S3, package repositories"
+  description       = "HTTPS to SSM, package repositories"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
@@ -85,21 +67,6 @@ resource "aws_vpc_security_group_egress_rule" "http" {
   from_port         = 80
   to_port           = 80
   cidr_ipv4         = "0.0.0.0/0"
-}
-
-# ---------------------------------------------------------------------------
-# Build notifications
-# ---------------------------------------------------------------------------
-resource "aws_sns_topic" "builds" {
-  name = "${var.name_prefix}-build-events"
-  tags = var.tags
-}
-
-resource "aws_sns_topic_subscription" "email" {
-  for_each  = toset(var.notification_emails)
-  topic_arn = aws_sns_topic.builds.arn
-  protocol  = "email"
-  endpoint  = each.value
 }
 
 # ---------------------------------------------------------------------------
@@ -209,24 +176,6 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
       variable = "kms:ViaService"
       values   = ["ec2.*.amazonaws.com"]
     }
-  }
-  statement {
-    sid = "S3LogsAccess"
-    actions = [
-      "s3:PutObject",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:GetBucketLocation"
-    ]
-    resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}",
-      "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}/*"
-    ]
-  }
-  statement {
-    sid       = "SNSPublish"
-    actions   = ["sns:Publish"]
-    resources = ["arn:${data.aws_partition.current.partition}:sns:*:${data.aws_caller_identity.current.account_id}:*"]
   }
   statement {
     sid     = "IAMPassRole"

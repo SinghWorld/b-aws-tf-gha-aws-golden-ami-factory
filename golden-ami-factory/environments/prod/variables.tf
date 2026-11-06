@@ -69,18 +69,6 @@ variable "key_pair_name" {
   default     = "MYLABKEY"
 }
 
-variable "log_bucket_name" {
-  description = "Name of the existing S3 bucket used for Image Builder logs."
-  type        = string
-  default     = "jcp-infra-nonprod"
-}
-
-variable "log_bucket_prefix" {
-  description = "S3 key prefix for all Image Builder logs."
-  type        = string
-  default     = "golden-ami-factory"
-}
-
 variable "ebs_encrypted" {
   description = "Whether to encrypt EBS volumes and output AMI snapshots. Set to false for no encryption."
   type        = bool
@@ -177,11 +165,6 @@ variable "linux_instance_types" {
 variable "images_to_retain" {
   type    = number
   default = 3
-}
-
-variable "notification_emails" {
-  type    = list(string)
-  default = []
 }
 
 variable "extra_tags" {
