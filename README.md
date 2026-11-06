@@ -10,7 +10,8 @@ A Terraform-based solution for building hardened, compliant Golden AMIs using EC
 - **SSM Agent**: Automatic installation and management
 - **Optional EBS Encryption**: Configurable encryption with customer-managed KMS keys
 - **Cross-Account AMI Sharing**: Share built AMIs with multiple AWS accounts (native Image Builder distribution)
-- **Lifecycle Management**: Automatic retention of N newest images
+- **Lifecycle Management**: Automatic retention of N newest images (configurable per recipe)
+- **Declarative Recipe Registry**: YAML-based recipe definitions for flexible pipeline configuration
 - **GitHub Actions Integration**: CI/CD pipeline for automated monthly builds
 
 ## Architecture
@@ -44,7 +45,6 @@ A Terraform-based solution for building hardened, compliant Golden AMIs using EC
 ```
 
 **Key**: AMI sharing and SSM parameter creation happen **natively during Image Builder pipeline execution** - no separate Terraform apply needed.
-```
 
 ## Prerequisites
 
@@ -111,8 +111,8 @@ target_account_ids = []
 # Optional: Scheduled builds (null = manual/GitHub Actions triggered)
 pipeline_schedule_expression = null
 
-# OS Selection
-enabled_os = ["rhel-8", "rhel-9", "rhel-10", "windows-2022", "windows-2025"]
+# Recipe Selection (NEW - replaces enabled_os)
+enabled_recipes = ["rhel-9", "windows-2025"]
 
 # STIG Level
 stig_level = "medium"
@@ -155,12 +155,12 @@ terraform plan
 terraform apply
 ```
 
-Creates for each OS:
+Creates for each enabled recipe:
 - Image Recipe (with component chain)
 - Infrastructure Configuration
 - Distribution Configuration
 - Image Pipeline
-- Lifecycle Policy (retains 3 newest AMIs)
+- Lifecycle Policy (retains 3 newest AMIs by default, configurable per recipe)
 
 ### 7. Trigger First Build
 
@@ -176,6 +176,60 @@ aws imagebuilder start-image-pipeline-execution \
 
 **Option C: GitHub Actions (Recommended)**
 See [GitHub Actions Setup](#github-actions-setup) below.
+
+---
+
+## Recipe Registry (NEW)
+
+### Overview
+
+Recipes are now defined declaratively in YAML files under `modules/recipe_registry/recipes/`. This provides:
+- **Version-controlled recipes** - track changes in Git
+- **Per-recipe customization** - STIG level, volume size, component chain, tags
+- **Easy extensibility** - add new recipes by creating a YAML file
+- **Template interpolation** - automatic resolution of component ARNs
+
+### Available Recipes
+
+| Recipe Key | OS | Base Image | Volume | STIG Level |
+|------------|-----|------------|--------|------------|
+| `rhel-8` | RHEL 8 | AWS-managed | 100 GB | medium |
+| `rhel-9` | RHEL 9 | AWS-managed | 100 GB | medium |
+| `rhel-10` | RHEL 10 | AWS-managed | 100 GB | medium |
+| `windows-2022` | Windows Server 2022 | AWS-managed | 100 GB | medium |
+| `windows-2025` | Windows Server 2025 | AWS-managed | 50 GB | medium |
+
+### Enabling Recipes
+
+In `terraform.tfvars`:
+```hcl
+enabled_recipes = ["rhel-9", "windows-2025"]
+```
+
+### Adding a New Recipe
+
+1. Create a new YAML file in `modules/recipe_registry/recipes/` (e.g., `rhel-9-stig-high.yaml`)
+2. Add the recipe key to `modules/recipe_registry/recipes/index.yaml`
+3. Enable in `terraform.tfvars`
+
+Example custom recipe:
+```yaml
+# modules/recipe_registry/recipes/rhel-9-stig-high.yaml
+name: "RHEL 9 STIG High"
+description: "RHEL 9 with STIG High compliance"
+os_family: "linux"
+parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-9-x86/x.x.x"
+stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+stig_level: "high"
+root_volume_size: 100
+component_chain:
+  - arn: "${aws_managed_components_prefix}:component/update-linux/x.x.x"
+    phase: "build"
+  # ... rest of chain
+tags:
+  Compliance: "STIG-High"
+  BaseOS: "RHEL-9"
+```
 
 ---
 
@@ -243,7 +297,7 @@ When the Image Builder pipeline runs:
 
 1. **AMI is built** in the source account (732533289325)
 2. **AMI is shared** with all accounts in `target_account_ids`
-3. **SSM parameter** `/golden-ami/{os_key}/latest` is created in:
+3. **SSM parameter** `/golden-ami/{recipe_key}/latest` is created in:
    - The source account
    - Each target account (same parameter name, account-specific value)
 4. **Lifecycle policy** manages retention in the source account
@@ -268,6 +322,38 @@ aws ec2 describe-images \
 ```
 
 Or via Console: EC2 -> AMIs -> "Private images" -> "Shared with me"
+
+### Target Account Prerequisites
+
+Each target account **must** have the following IAM role for Image Builder to assume during distribution:
+
+```hcl
+# In TARGET ACCOUNT (e.g., 774133226694, 373160674113):
+resource "aws_iam_role" "imagebuilder_distribution_cross_account" {
+  name = "EC2ImageBuilderDistributionCrossAccountRole"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::SOURCE_ACCOUNT_ID:root" }
+      Action    = "sts:AssumeRole"
+      Condition = {
+        StringEquals = {
+          "sts:ExternalId" = "imagebuilder-distribution"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "distribution" {
+  role       = aws_iam_role.imagebuilder_distribution_cross_account.name
+  policy_arn = "arn:aws:iam::aws:policy/EC2ImageBuilderDistributionCrossAccountRolePolicy"
+}
+```
+
+**Required AWS Managed Policy:** `EC2ImageBuilderDistributionCrossAccountRolePolicy` (or equivalent custom policy with `ec2:ModifyImageAttribute`, `ec2:CopyImage`, `ssm:PutParameter` on target account resources).
 
 ---
 
@@ -313,35 +399,35 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 | `ebs_encrypted` | bool | `false` | Enable EBS/AMI encryption |
 | `ebs_kms_key_alias` | string | `alias/aws/ebs` | KMS key alias (if encrypted) |
 | `target_account_ids` | list(string) | `[]` | Accounts for AMI sharing |
-| `enabled_os` | list(string) | All 5 OSes | Which images to build |
+| `enabled_recipes` | list(string) | All 5 recipes | Which recipes to build (NEW) |
 | `stig_level` | string | `medium` | STIG severity (low/medium/high) |
 | `ami_name_prefix` | string | `jq-golden-ami` | AMI name prefix |
 | `ami_release_version` | string | `1` | Release suffix (e.g., 1 = YYMM.1) |
 | `pipeline_schedule_expression` | string | `null` | Cron for scheduled builds |
-| `images_to_retain` | number | `3` | AMIs to retain per OS |
+| `images_to_retain` | number | `3` | AMIs to retain per OS (global default) |
 | `notification_emails` | list(string) | `[]` | SNS notification emails |
 
 ---
 
 ## Component Chain Order
 
-### Linux
+### Linux (rhel-8, rhel-9, rhel-10)
 1. `update-linux` - OS patches
 2. `aws-cli-version-2-linux` - AWS CLI v2
-3. `linux-ssm-agent` - SSM Agent install/upgrade
+3. `linux-ssm-agent` - SSM Agent install/upgrade (custom)
 4. `stig-build-linux` - STIG hardening (configurable level)
-5. `linux-hardening` - Extra hardening (SSH, kernel, filesystems)
-6. `linux-validate` - Baseline validation tests
+5. `linux-hardening` - Extra hardening (SSH, kernel, filesystems) (custom)
+6. `linux-validate` - Baseline validation tests (custom)
 7. `amazon-cloudwatch-agent-linux` - AWS-managed CloudWatch Agent installation only
 8. `simple-boot-test-linux` - Boot verification
 
-### Windows
+### Windows (windows-2022, windows-2025)
 1. `update-windows` - OS patches
 2. `aws-cli-version-2-windows` - AWS CLI v2
-3. `windows-ssm-agent` - SSM Agent check
+3. `windows-ssm-agent` - SSM Agent check (custom)
 4. `stig-build-windows` - STIG hardening (configurable level)
-5. `windows-hardening` - Extra hardening (SMB, TLS, Guest)
-6. `windows-validate` - Baseline validation tests
+5. `windows-hardening` - Extra hardening (SMB, TLS, Guest) (custom)
+6. `windows-validate` - Baseline validation tests (custom)
 7. `amazon-cloudwatch-agent-windows` - AWS-managed CloudWatch Agent installation only
 8. `simple-boot-test-windows` - Boot verification
 
@@ -350,14 +436,10 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 ## Outputs
 
 ### Prod Environment
-- `pipeline_arns` - Map of OS -> Pipeline ARN
-- `ssm_parameters` - Map of OS -> SSM Parameter name
-- `ami_name_templates` - Map of OS -> AMI name template
+- `pipeline_arns` - Map of Recipe -> Pipeline ARN
+- `ssm_parameters` - Map of Recipe -> SSM Parameter name
+- `ami_name_templates` - Map of Recipe -> AMI name template
 - `kms_key_arn` - KMS key ARN (if encryption enabled)
-
-### AMI Sharing Environment
-- `shared_ami_ids` - Map of OS -> Shared AMI ID
-- `target_accounts` - List of target account IDs
 
 ---
 
@@ -366,7 +448,7 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 ### Build Failures
 1. Check Image Builder console: EC2 -> Image Builder -> Image pipelines
 2. Check CloudWatch Logs: `/aws/imagebuilder/<pipeline-name>`
-3. Check S3 logs bucket: `s3://<bucket>/golden-ami-factory/<os-key>/`
+3. Check S3 logs bucket: `s3://<bucket>/golden-ami-factory/<recipe-key>/`
 
 ### AMI Not Shared
 1. Verify AMI IDs exist in SSM: `aws ssm get-parameters-by-path --path /golden-ami/`
@@ -387,6 +469,7 @@ Go to Actions -> "Build Golden AMI" -> "Run workflow" -> Select OS -> Run.
 - **Network**: Build instances in private subnet, no inbound access
 - **IAM**: Least-privilege roles for Image Builder, build instances, lifecycle
 - **STIG**: Configurable compliance level (Low/Medium/High)
+- **Dynamic Cross-Account Permissions**: No hardcoded account IDs in IAM policies
 
 ---
 
