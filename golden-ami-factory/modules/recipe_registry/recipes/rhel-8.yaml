@@ -1,8 +1,8 @@
-# RHEL 8 STIG Medium Recipe
-# Golden AMI recipe for Red Hat Enterprise Linux 8 with STIG Medium compliance
+# RHEL 8 Golden Image Recipe
+# Golden AMI recipe for Red Hat Enterprise Linux 8
 
 name: "RHEL 8 Golden Image"
-description: "Hardened RHEL 8 image with STIG Medium compliance, SSM Agent, CloudWatch Agent, and validation tests"
+description: "Hardened RHEL 8 image with SSM Agent, CloudWatch Agent, and validation tests"
 
 os_family: "linux"
 
@@ -75,6 +75,6 @@ lifecycle_policy_count: 3
 
 # Optional: Additional tags
 tags:
-  Compliance: "STIG-Medium"
+  Compliance: "STIG"
   OSFamily: "Linux"
   BaseOS: "RHEL-8"

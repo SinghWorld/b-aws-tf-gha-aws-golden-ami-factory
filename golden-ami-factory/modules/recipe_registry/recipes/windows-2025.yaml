@@ -1,16 +1,16 @@
-# Windows Server 2022 STIG Medium Recipe
-# Golden AMI recipe for Windows Server 2022 with STIG Medium compliance
+# Windows Server 2025 Golden Image Recipe
+# Golden AMI recipe for Windows Server 2025
 
-name: "Windows Server 2022 Golden Image"
-description: "Hardened Windows Server 2022 image with STIG Medium compliance, SSM Agent, CloudWatch Agent, and validation tests"
+name: "Windows Server 2025 Golden Image"
+description: "Hardened Windows Server 2025 image with SSM Agent, CloudWatch Agent, and validation tests"
 
 os_family: "windows"
 
-parent_image_arn: "${aws_managed_components_prefix}:image/windows-server-2022-english-full-base-x86/x.x.x"
+parent_image_arn: "${aws_managed_components_prefix}:image/windows-server-2025-english-full-base-x86/x.x.x"
 stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-windows/x.x.x"
 stig_level: "medium"
 
-root_volume_size: 100
+root_volume_size: 50
 root_device_name: "/dev/sda1"
 ebs_encrypted: false
 kms_key_arn: ""
@@ -41,6 +41,6 @@ distribution_regions: []
 lifecycle_policy_count: 3
 
 tags:
-  Compliance: "STIG-Medium"
+  Compliance: "STIG"
   OSFamily: "Windows"
-  BaseOS: "Windows-2022"
+  BaseOS: "Windows-2025"

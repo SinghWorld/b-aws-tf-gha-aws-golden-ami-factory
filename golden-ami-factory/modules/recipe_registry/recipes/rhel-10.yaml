@@ -1,12 +1,12 @@
-# RHEL 9 STIG Medium Recipe
-# Golden AMI recipe for Red Hat Enterprise Linux 9 with STIG Medium compliance
+# RHEL 10 Golden Image Recipe
+# Golden AMI recipe for Red Hat Enterprise Linux 10
 
-name: "RHEL 9 Golden Image"
-description: "Hardened RHEL 9 image with STIG Medium compliance, SSM Agent, CloudWatch Agent, and validation tests"
+name: "RHEL 10 Golden Image"
+description: "Hardened RHEL 10 image with SSM Agent, CloudWatch Agent, and validation tests"
 
 os_family: "linux"
 
-parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-9-x86/x.x.x"
+parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-10-x86/x.x.x"
 stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
 stig_level: "medium"
 
@@ -41,6 +41,6 @@ distribution_regions: []
 lifecycle_policy_count: 3
 
 tags:
-  Compliance: "STIG-Medium"
+  Compliance: "STIG"
   OSFamily: "Linux"
-  BaseOS: "RHEL-9"
+  BaseOS: "RHEL-10"

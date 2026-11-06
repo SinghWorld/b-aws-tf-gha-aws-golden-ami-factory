@@ -3,11 +3,11 @@
 # To enable/disable recipes, modify the 'enabled_recipes' variable or edit this list.
 
 recipes:
-  - rhel-8-stig-medium
-  - rhel-9-stig-medium
-  - rhel-10-stig-medium
-  - windows-2022-stig-medium
-  - windows-2025-stig-medium
+  - rhel-8
+  - rhel-9
+  - rhel-10
+  - windows-2022
+  - windows-2025
 
 # Example additional recipes (uncomment to enable):
 #   - rhel-9-stig-high
