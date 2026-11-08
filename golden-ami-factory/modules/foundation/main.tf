@@ -49,6 +49,9 @@ resource "aws_security_group" "build" {
   description = "Image Builder build instances: no ingress, web egress only"
   vpc_id      = var.vpc_id
   tags        = merge(var.tags, { Name = "${var.name_prefix}-build-sg" })
+
+  # Remove default allow-all egress rule; we manage egress via aws_vpc_security_group_egress_rule resources
+  egress = []
 }
 
 resource "aws_vpc_security_group_egress_rule" "https" {
