@@ -1,17 +1,10 @@
 variable "deployments" {
-  description = "AWS accounts and regions that can be selected as Terraform deployment targets. The account_id should be the TARGET account where resources are created (e.g., Development account)."
+  description = "AWS accounts and regions that can be selected as Terraform deployment targets. The account_id should be the TARGET account where resources are created (e.g., Development account). Must be provided in terraform.tfvars."
   type = map(object({
     account_name = string
     account_id   = string
     aws_region   = string
   }))
-  default = {
-    jetstarairwaysnonprod_syd = {
-      account_name = "Development"
-      account_id   = "732533289325" # Development account - where AMIs are built
-      aws_region   = "us-east-1"
-    }
-  }
 
   validation {
     condition     = alltrue([for deployment in values(var.deployments) : can(regex("^[0-9]{12}$", deployment.account_id)) && length(trimspace(deployment.aws_region)) > 0])
