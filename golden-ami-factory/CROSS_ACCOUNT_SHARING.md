@@ -4,6 +4,14 @@
 
 This project uses **AWS EC2 Image Builder's native cross-account distribution** to automatically share AMIs with target accounts during pipeline execution. No separate Terraform configuration or apply is required beyond the initial setup.
 
+## Current Configuration
+
+- **Source Account**: 732533289325 (Development) in **ap-southeast-2**
+- **Target Accounts**: 
+  - 774133226694 (Production)
+  - 373160674113 (Management)
+- **Encryption**: Disabled by default (`ebs_encrypted = false`) for seamless sharing
+
 ## How It Works
 
 The `golden_image` module's `aws_imagebuilder_distribution_configuration` (in `modules/golden_image/main.tf`) handles everything:
@@ -39,7 +47,7 @@ resource "aws_imagebuilder_distribution_configuration" "this" {
 }
 ```
 
-## Current Configuration
+## Configuration
 
 Target accounts are configured in **`environments/prod/variables.tf`**:
 
@@ -89,12 +97,12 @@ terraform apply
 
 When the Image Builder pipeline runs:
 
-1. **AMI is built** in the source account (732533289325)
+1. **AMI is built** in the source account (732533289325, ap-southeast-2)
 2. **AMI is shared** with all accounts in `target_account_ids`
 3. **SSM parameter** `/golden-ami/{os_key}/latest` is created in:
    - The source account
    - Each target account (same parameter name, account-specific value)
-4. **Lifecycle policy** manages retention in the source account
+4. **Lifecycle policy** manages retention in the source account (keeps 3 newest)
 
 ## Verification
 
@@ -102,14 +110,14 @@ After a pipeline run, verify in each target account:
 
 ```bash
 # In target account (e.g., 774133226694)
-aws ssm get-parameter --name "/golden-ami/rhel-9/latest" --region us-east-1
+aws ssm get-parameter --name "/golden-ami/rhel-9/latest" --region ap-southeast-2
 ```
 
 The parameter value will be the AMI ID shared from the source account.
 
 ```bash
 # List shared AMIs in target account
-aws ec2 describe-images --owners 732533289325 --filters "Name=name,Values=jq-golden-ami-*" --region us-east-1
+aws ec2 describe-images --owners 732533289325 --filters "Name=name,Values=jq-golden-ami-*" --region ap-southeast-2
 ```
 
 ## Architecture Benefits
@@ -126,15 +134,16 @@ aws ec2 describe-images --owners 732533289325 --filters "Name=name,Values=jq-gol
 
 ## Required Permissions
 
-The Image Builder execution role (created by `foundation` module) needs:
+### Source Account (Automatically Configured)
 
+The Image Builder execution role (created by `foundation` module) needs:
 - `ec2:ModifyImageAttribute` on the AMI (for sharing)
 - `ssm:PutParameter` in target accounts (for SSM parameters)
 - `sts:AssumeRole` on the distribution role in each target account
 
 The `foundation` module **dynamically generates** the cross-account assume role permissions based on `var.target_account_ids`. No code changes needed when adding/removing accounts.
 
-## Target Account Prerequisites
+### Target Account Prerequisites (Manual - One Time Per Account)
 
 Each target account **must** have the following IAM role for Image Builder to assume during distribution:
 
@@ -147,7 +156,7 @@ resource "aws_iam_role" "imagebuilder_distribution_cross_account" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { AWS = "arn:aws:iam::SOURCE_ACCOUNT_ID:root" }
+      Principal = { AWS = "arn:aws:iam::732533289325:root" }
       Action    = "sts:AssumeRole"
       Condition = {
         StringEquals = {
@@ -164,21 +173,20 @@ resource "aws_iam_role_policy_attachment" "distribution" {
 }
 ```
 
-**Required AWS Managed Policy:** `EC2ImageBuilderDistributionCrossAccountRolePolicy` (or equivalent custom policy with `ec2:ModifyImageAttribute`, `ec2:CopyImage`, `ssm:PutParameter` on target account resources).
-
-### Automated Target Account Setup (Optional)
-
-For enterprise deployments, consider using **AWS Organizations** + **StackSets** to automatically deploy the cross-account role to all accounts tagged with `GoldenAMI = true`.
+**Required AWS Managed Policy:** `EC2ImageBuilderDistributionCrossAccountRolePolicy` (provides `ec2:ModifyImageAttribute`, `ec2:CopyImage`, `ssm:PutParameter` on target account resources).
 
 ## Encryption Considerations
 
-### Default (Unencrypted)
+### Current Default (Unencrypted) ✅
+
 - Works out of the box for cross-account sharing
 - No KMS configuration required
 - AMIs are unencrypted in all accounts
+- **This is the current production configuration**
 
-### Encrypted AMIs (Customer Managed Keys)
-When `var.ebs_encrypted = true`:
+### Encrypted AMIs (Customer Managed Keys) - Future Enhancement
+
+When `var.ebs_encrypted = true` is needed:
 
 1. **Source Account**: Requires customer managed KMS key (`var.ebs_kms_key_alias`)
 2. **Key Policy**: Must allow `imagebuilder.amazonaws.com` and target accounts
@@ -227,28 +235,35 @@ When `var.ebs_encrypted = true`:
 ## Troubleshooting
 
 ### AMI Not Shared
+
 ```bash
 # Check launch permissions in target account
-aws ec2 describe-image-attribute --image-id ami-xxxxx --attribute launchPermission --region us-east-1
+aws ec2 describe-image-attribute --image-id ami-xxxxx --attribute launchPermission --region ap-southeast-2
 ```
 
 ### SSM Parameter Missing in Target
+
 ```bash
 # Verify execution role has ssm:PutParameter in target
-aws iam simulate-principal-policy --policy-source-arn <execution-role-arn> --action-names ssm:PutParameter --resource-arns "arn:aws:ssm:us-east-1:TARGET_ACCOUNT:parameter/golden-ami/*"
+aws iam simulate-principal-policy --policy-source-arn <execution-role-arn> --action-names ssm:PutParameter --resource-arns "arn:aws:ssm:ap-southeast-2:TARGET_ACCOUNT:parameter/golden-ami/*"
 ```
 
-### KMS Access Denied
+### KMS Access Denied (When Encryption Enabled)
+
 - Verify source KMS key policy allows target accounts
 - Verify target KMS key allows `imagebuilder.amazonaws.com`
 - Check CloudTrail for `KMS.Decrypt` events
 
+### Target Account Role Missing
+
+Ensure each target account has the `EC2ImageBuilderDistributionCrossAccountRole` with the correct trust policy pointing to source account (732533289325) and ExternalId `imagebuilder-distribution`.
+
 ## Future Enhancement: accounts.yaml (Planned)
 
-For dynamic, GitOps-friendly account management, see `SOLUTION.md` for the planned `accounts.yaml` approach that will replace static `target_account_ids` with a declarative account registry.
+For dynamic, GitOps-friendly account management at scale (10+ accounts), see `SOLUTION.md` for the planned `accounts.yaml` approach that will replace static `target_account_ids` with a declarative account registry supporting per-account region mapping, retention, and compliance settings.
 
 ---
 
-*Document Version: 2.0*  
+*Document Version: 2.1*  
 *Author: Platform Engineering*  
-*Last Updated: 2025-11-06*
+*Last Updated: 2025-11-09*
