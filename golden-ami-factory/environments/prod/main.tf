@@ -1,3 +1,7 @@
+# =============================================================================
+# Main Configuration for AWS Golden AMI Factory - Production Environment
+# =============================================================================
+
 module "foundation" {
   source = "../../modules/foundation"
 
@@ -21,8 +25,9 @@ module "recipe_registry" {
   recipes_path                = "${path.module}/../../modules/recipe_registry/recipes"
   custom_components_arns      = module.components.arns
   aws_managed_prefix          = local.jq_prefix
-  default_stig_level          = var.stig_level
-  default_root_volume_size    = 100
+  default_stig_level          = var.default_stig_level
+  default_root_volume_size    = var.default_root_volume_size
+  default_lifecycle_policy_count = var.default_lifecycle_policy_count
   tags                        = local.common_tags
   enabled_recipes             = var.enabled_recipes
 }
@@ -32,11 +37,9 @@ module "golden_image" {
   for_each = module.recipe_registry.recipes
 
   name_prefix                   = local.name_prefix
-  # Recipe key is now clean (e.g., "rhel-9") without compliance suffix
   os_key                        = each.key
   os_family                     = each.value.os_family
   display_name                  = each.value.name
-  # ami_os_code from recipe key (e.g., "rhel-9" -> "rhel9")
   ami_os_code                   = replace(each.key, "-", "")
   ami_name_prefix               = var.ami_name_prefix
   ami_architecture              = var.ami_architecture
@@ -47,6 +50,7 @@ module "golden_image" {
   stig_component_arn            = each.value.stig_component_arn
   stig_level                    = each.value.stig_level
   root_volume_size              = each.value.root_volume_size
+  root_device_name              = each.value.root_device_name
   ebs_encrypted                 = each.value.ebs_encrypted
   kms_key_arn                   = each.value.kms_key_arn != "" ? each.value.kms_key_arn : (var.ebs_encrypted ? data.aws_kms_alias.ebs[0].target_key_arn : "")
 
@@ -57,10 +61,11 @@ module "golden_image" {
   instance_profile_name         = module.foundation.instance_profile_name
   imagebuilder_execution_role_arn = module.foundation.imagebuilder_execution_role_arn
 
-  # SSM parameter uses clean recipe key
   ssm_parameter_name            = "${var.ssm_parameter_prefix}/${each.key}/latest"
   target_account_ids            = var.target_account_ids
   schedule_expression           = var.pipeline_schedule_expression
+  schedule_timezone             = var.schedule_timezone
+  test_timeout_minutes          = var.test_timeout_minutes
   images_to_retain              = each.value.lifecycle_policy_count
   lifecycle_role_arn            = module.foundation.lifecycle_role_arn
   tags                          = each.value.tags

@@ -14,10 +14,11 @@ parent_image_arn: "${aws_managed_prefix}:image/red-hat-enterprise-linux-8-x86/x.
 stig_component_arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
 
 # STIG level: low, medium, or high (using high as baseline for CIS compliance)
-stig_level: "high"
+# Can be overridden by default_stig_level from terraform.tfvars
+stig_level: "${default_stig_level}"
 
 # Root volume configuration
-root_volume_size: 100
+root_volume_size: ${default_root_volume_size}
 root_device_name: "/dev/xvda"
 ebs_encrypted: false
 kms_key_arn: ""
@@ -62,7 +63,7 @@ component_chain:
 block_device_mappings: []
 ami_name_suffix: ""
 distribution_regions: []
-lifecycle_policy_count: 3
+lifecycle_policy_count: ${default_lifecycle_policy_count}
 
 tags:
   Compliance: "CIS-Level-2"

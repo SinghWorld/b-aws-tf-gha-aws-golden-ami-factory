@@ -22,10 +22,11 @@ locals {
 
   # Template variables for interpolation
   template_vars = {
-    aws_managed_prefix     = var.aws_managed_prefix
-    custom_components_arns = var.custom_components_arns
-    default_stig_level     = var.default_stig_level
-    default_root_volume_size = var.default_root_volume_size
+    aws_managed_prefix              = var.aws_managed_prefix
+    custom_components_arns          = var.custom_components_arns
+    default_stig_level              = var.default_stig_level
+    default_root_volume_size        = var.default_root_volume_size
+    default_lifecycle_policy_count  = var.default_lifecycle_policy_count
   }
 
   # Interpolate template variables in recipe YAML
@@ -60,7 +61,7 @@ locals {
       block_device_mappings         = coalesce(config.block_device_mappings, [])
       ami_name_suffix               = config.ami_name_suffix
       distribution_regions          = coalesce(config.distribution_regions, [])
-      lifecycle_policy_count        = coalesce(config.lifecycle_policy_count, 3)
+      lifecycle_policy_count        = coalesce(config.lifecycle_policy_count, var.default_lifecycle_policy_count)
       tags                          = merge(var.tags, config.tags)
 
       # Computed fields

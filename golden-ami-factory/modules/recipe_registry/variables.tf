@@ -1,3 +1,7 @@
+# =============================================================================
+# Variables for Recipe Registry Module
+# =============================================================================
+
 variable "recipes_path" {
   description = "Path to the recipes directory containing YAML recipe definitions."
   type        = string
@@ -31,6 +35,12 @@ variable "default_root_volume_size" {
   description = "Default root volume size in GB."
   type        = number
   default     = 100
+}
+
+variable "default_lifecycle_policy_count" {
+  description = "Default number of AMIs to retain per OS (0 disables)."
+  type        = number
+  default     = 3
 }
 
 variable "tags" {

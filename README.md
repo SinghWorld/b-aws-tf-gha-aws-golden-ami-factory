@@ -178,7 +178,8 @@ Create `backend.hcl` in `environments/prod/`:
 bucket         = "your-terraform-state-bucket"
 key            = "golden-ami-factory/prod/terraform.tfstate"
 region         = "us-east-1"
-dynamodb_table = "terraform-state-lock"
+# dynamodb_table = "terraform-state-lock"
+use_lockfile = true
 encrypt        = true
 ```
 

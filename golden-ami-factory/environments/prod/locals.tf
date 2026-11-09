@@ -1,3 +1,8 @@
+# =============================================================================
+# Locals for AWS Golden AMI Factory - Production Environment
+# Derived values and computed configurations
+# =============================================================================
+
 data "aws_partition" "current" {}
 data "aws_region" "current" {}
 
@@ -7,17 +12,14 @@ data "aws_kms_alias" "ebs" {
 }
 
 locals {
+  # Project name prefix
   name_prefix    = var.project
+
+  # AMI date token - either from override or derived from plan timestamp
   ami_date_token = coalesce(var.ami_date_token, formatdate(var.ami_date_format, plantimestamp()))
 
-  common_tags = merge(var.extra_tags, {
-    CostCentre  = "579087"
-    CreatedBy   = "DL-TechInfraCloud@singhworld.com"
-    Environment = "Production"
-    DeployedBy  = "IAC using Terraform"
-    Owner       = "DL-TechInfraCloud@singhworld.com"
-    ProtectedBy = "Tech-Infra-Cloud@singhworld.com"
-  })
+  # Common tags merged with extra tags
+  common_tags = merge(var.common_tags, var.extra_tags)
 
   # Amazon managed resources use account "aws" and x.x.x to track the newest version.
   # All components and parent images use deployment region (STIG is available in all regions)
@@ -32,11 +34,11 @@ locals {
   # LEGACY: OS catalog for backward compatibility with enabled_os variable
   # New deployments should use recipe_registry module with enabled_recipes
   os_catalog = {
-    "rhel-8"       = { family = "linux", display = "RHEL 8", ami_os_code = "rhel8", parent = "red-hat-enterprise-linux-8-x86", volume_gb = 100 }
-    "rhel-9"       = { family = "linux", display = "RHEL 9", ami_os_code = "rhel9", parent = "red-hat-enterprise-linux-9-x86", volume_gb = 100 }
-    "rhel-10"      = { family = "linux", display = "RHEL 10", ami_os_code = "rhel10", parent = "red-hat-enterprise-linux-10-x86", volume_gb = 100 }
-    "windows-2022" = { family = "windows", display = "Windows Server 2022", ami_os_code = "win2022", parent = "windows-server-2022-english-full-base-x86", volume_gb = 100 }
-    "windows-2025" = { family = "windows", display = "Windows Server 2025", ami_os_code = "win2025", parent = "windows-server-2025-english-full-base-x86", volume_gb = 50 }
+    "rhel-8"       = { family = "linux", display = "RHEL 8", ami_os_code = "rhel8", parent = "red-hat-enterprise-linux-8-x86", volume_gb = var.default_root_volume_size, root_device = var.linux_root_device_name }
+    "rhel-9"       = { family = "linux", display = "RHEL 9", ami_os_code = "rhel9", parent = "red-hat-enterprise-linux-9-x86", volume_gb = var.default_root_volume_size, root_device = var.linux_root_device_name }
+    "rhel-10"      = { family = "linux", display = "RHEL 10", ami_os_code = "rhel10", parent = "red-hat-enterprise-linux-10-x86", volume_gb = var.default_root_volume_size, root_device = var.linux_root_device_name }
+    "windows-2022" = { family = "windows", display = "Windows Server 2022", ami_os_code = "win2022", parent = "windows-server-2022-english-full-base-x86", volume_gb = var.default_root_volume_size, root_device = var.windows_root_device_name }
+    "windows-2025" = { family = "windows", display = "Windows Server 2025", ami_os_code = "win2025", parent = "windows-server-2025-english-full-base-x86", volume_gb = var.default_root_volume_size, root_device = var.windows_root_device_name }
   }
 
   enabled_os = { for k, v in local.os_catalog : k => v if contains(var.enabled_os, k) }
