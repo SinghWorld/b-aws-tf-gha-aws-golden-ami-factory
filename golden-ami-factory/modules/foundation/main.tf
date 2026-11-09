@@ -50,26 +50,29 @@ resource "aws_security_group" "build" {
   vpc_id      = var.vpc_id
   tags        = merge(var.tags, { Name = "${var.name_prefix}-build-sg" })
 
-  # Remove default allow-all egress rule; we manage egress via aws_vpc_security_group_egress_rule resources
-  egress = []
+  # Egress rules are managed via aws_security_group_rule resources below.
+  # We do NOT set egress = [] here because it conflicts with aws_vpc_security_group_egress_rule
+  # resources causing perpetual drift (AWS returns the rules as part of SG egress config).
 }
 
-resource "aws_vpc_security_group_egress_rule" "https" {
+resource "aws_security_group_rule" "https_egress" {
+  type              = "egress"
   security_group_id = aws_security_group.build.id
   description       = "HTTPS to SSM, package repositories"
-  ip_protocol       = "tcp"
+  protocol          = "tcp"
   from_port         = 443
   to_port           = 443
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
-resource "aws_vpc_security_group_egress_rule" "http" {
+resource "aws_security_group_rule" "http_egress" {
+  type              = "egress"
   security_group_id = aws_security_group.build.id
   description       = "HTTP for OS update mirrors"
-  ip_protocol       = "tcp"
+  protocol          = "tcp"
   from_port         = 80
   to_port           = 80
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
 # ---------------------------------------------------------------------------
