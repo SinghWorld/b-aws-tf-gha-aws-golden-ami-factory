@@ -1,20 +1,20 @@
 # RHEL 8 Golden Image Recipe
-# Golden AMI recipe for Red Hat Enterprise Linux 8
+# Golden AMI recipe for Red Hat Enterprise Linux 8 with CIS Level 2 compliance
 
 name: "RHEL 8 Golden Image"
-description: "Hardened RHEL 8 image with SSM Agent, CloudWatch Agent, and validation tests"
+description: "Hardened RHEL 8 image with STIG baseline + CIS Level 2 hardening, SSM Agent, CloudWatch Agent, and validation tests"
 
 os_family: "linux"
 
 # Parent image: AWS-managed RHEL 8 base image (uses deployment region)
-# Uses x.x.x to always pick the latest available version
-parent_image_arn: "${aws_managed_images_prefix}:image/red-hat-enterprise-linux-8-x86/x.x.x"
+parent_image_arn: "${aws_managed_prefix}:image/red-hat-enterprise-linux-8-x86/x.x.x"
 
-# CIS component ARN (AWS-managed, uses us-east-1 where CIS components are published)
-cis_component_arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
+# STIG component ARN (AWS-managed, available in deployment region)
+# Using STIG as baseline, then adding CIS Level 2 via custom hardening
+stig_component_arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
 
-# CIS level: level-1 or level-2
-cis_level: "level-2"
+# STIG level: low, medium, or high (using high as baseline for CIS compliance)
+stig_level: "high"
 
 # Root volume configuration
 root_volume_size: 100
@@ -23,58 +23,49 @@ ebs_encrypted: false
 kms_key_arn: ""
 
 # Component chain - order matters!
-# Each component can be:
-# - AWS-managed: use ${aws_managed_components_prefix}:component/name/x.x.x
-# - Custom: reference from custom_components_arns map (e.g., custom_components_arns["linux-ssm-agent"])
+# CIS Level 2 achieved via: STIG High baseline + Custom CIS Level 2 hardening
 component_chain:
-  # 1. OS patches
-  - arn: "${aws_managed_components_prefix}:component/update-linux/x.x.x"
+  # 1. OS patches (deployment region)
+  - arn: "${aws_managed_prefix}:component/update-linux/x.x.x"
     phase: "build"
 
-  # 2. AWS CLI v2
-  - arn: "${aws_managed_components_prefix}:component/aws-cli-version-2-linux/x.x.x"
+  # 2. AWS CLI v2 (deployment region)
+  - arn: "${aws_managed_prefix}:component/aws-cli-version-2-linux/x.x.x"
     phase: "build"
 
   # 3. SSM Agent (custom component)
   - arn: "${custom_components_arns["linux-ssm-agent"]}"
     phase: "build"
 
-  # 4. CIS hardening (AWS-managed, receives cis_level parameter)
-  - arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
+  # 4. STIG High hardening baseline (AWS-managed, deployment region)
+  - arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
     phase: "build"
     parameters:
-      Level: "Level 2"
+      Level: "High"
 
-  # 5. Extra hardening (custom component)
+  # 5. CIS Level 2 hardening (custom component - implements CIS benchmarks on top of STIG)
   - arn: "${custom_components_arns["linux-hardening"]}"
     phase: "build"
 
-  # 6. Validation tests (custom component)
+  # 6. Validation tests (custom component - validates CIS Level 2 compliance)
   - arn: "${custom_components_arns["linux-validate"]}"
     phase: "test"
 
-  # 7. CloudWatch Agent (AWS-managed)
-  - arn: "${aws_managed_components_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
+  # 7. CloudWatch Agent (deployment region)
+  - arn: "${aws_managed_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
     phase: "build"
 
-  # 8. Boot verification (AWS-managed)
-  - arn: "${aws_managed_components_prefix}:component/simple-boot-test-linux/x.x.x"
+  # 8. Boot verification (deployment region)
+  - arn: "${aws_managed_prefix}:component/simple-boot-test-linux/x.x.x"
     phase: "test"
 
-# Optional: Additional block device mappings
 block_device_mappings: []
-
-# Optional: AMI name suffix (added to default naming)
 ami_name_suffix: ""
-
-# Optional: Additional distribution regions (empty = build region only)
 distribution_regions: []
-
-# Optional: Lifecycle policy - number of AMIs to retain
 lifecycle_policy_count: 3
 
-# Optional: Additional tags
 tags:
-  Compliance: "CIS"
+  Compliance: "CIS-Level-2"
+  Baseline: "STIG-High"
   OSFamily: "Linux"
   BaseOS: "RHEL-8"

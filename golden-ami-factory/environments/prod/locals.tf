@@ -20,10 +20,8 @@ locals {
   })
 
   # Amazon managed resources use account "aws" and x.x.x to track the newest version.
-  # AWS managed components (CIS, STIG, etc.) are only available in us-east-1, so we use a fixed region.
+  # All components and parent images use deployment region (STIG is available in all regions)
   jq_prefix = "arn:${data.aws_partition.current.partition}:imagebuilder:${data.aws_region.current.region}:aws"
-  # For AWS managed components, always use us-east-1 where they are published
-  aws_managed_prefix = "arn:${data.aws_partition.current.partition}:imagebuilder:us-east-1:aws"
 
   # Recipes select the latest available custom component; build logs show the resolved version.
   latest_component_arns = {
@@ -47,24 +45,24 @@ locals {
   # New deployments use recipe_registry module with declarative YAML recipes
   component_chain = {
     windows = [
-      "${local.aws_managed_prefix}:component/update-windows/x.x.x",
-      "${local.aws_managed_prefix}:component/aws-cli-version-2-windows/x.x.x",
+      "${local.jq_prefix}:component/update-windows/x.x.x",
+      "${local.jq_prefix}:component/aws-cli-version-2-windows/x.x.x",
       local.latest_component_arns["windows-ssm-agent"],
-      "${local.aws_managed_prefix}:component/cis-build-windows/x.x.x",
+      "${local.jq_prefix}:component/stig-build-windows/x.x.x",
       module.components.arns["windows-hardening"],
       module.components.arns["windows-validate"],
-      "${local.aws_managed_prefix}:component/amazon-cloudwatch-agent-windows/x.x.x",
-      "${local.aws_managed_prefix}:component/simple-boot-test-windows/x.x.x",
+      "${local.jq_prefix}:component/amazon-cloudwatch-agent-windows/x.x.x",
+      "${local.jq_prefix}:component/simple-boot-test-windows/x.x.x",
     ]
     linux = [
-      "${local.aws_managed_prefix}:component/update-linux/x.x.x",
-      "${local.aws_managed_prefix}:component/aws-cli-version-2-linux/x.x.x",
+      "${local.jq_prefix}:component/update-linux/x.x.x",
+      "${local.jq_prefix}:component/aws-cli-version-2-linux/x.x.x",
       module.components.arns["linux-ssm-agent"],
-      "${local.aws_managed_prefix}:component/cis-build-linux/x.x.x",
+      "${local.jq_prefix}:component/stig-build-linux/x.x.x",
       module.components.arns["linux-hardening"],
       module.components.arns["linux-validate"],
-      "${local.aws_managed_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x",
-      "${local.aws_managed_prefix}:component/simple-boot-test-linux/x.x.x",
+      "${local.jq_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x",
+      "${local.jq_prefix}:component/simple-boot-test-linux/x.x.x",
     ]
   }
 }

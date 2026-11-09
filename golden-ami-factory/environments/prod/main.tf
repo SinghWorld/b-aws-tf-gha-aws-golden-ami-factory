@@ -20,9 +20,8 @@ module "recipe_registry" {
   source                      = "../../modules/recipe_registry"
   recipes_path                = "${path.module}/../../modules/recipe_registry/recipes"
   custom_components_arns      = module.components.arns
-  aws_managed_components_prefix = local.aws_managed_prefix
-  aws_managed_images_prefix   = local.jq_prefix
-  default_cis_level           = var.cis_level
+  aws_managed_prefix          = local.jq_prefix
+  default_stig_level          = var.stig_level
   default_root_volume_size    = 100
   tags                        = local.common_tags
   enabled_recipes             = var.enabled_recipes
@@ -45,8 +44,8 @@ module "golden_image" {
   ami_release_version           = var.ami_release_version
   parent_image_arn              = each.value.parent_image_arn
   component_arns                = each.value.component_arns
-  cis_component_arn             = each.value.cis_component_arn
-  cis_level                     = each.value.cis_level
+  stig_component_arn            = each.value.stig_component_arn
+  stig_level                    = each.value.stig_level
   root_volume_size              = each.value.root_volume_size
   ebs_encrypted                 = each.value.ebs_encrypted
   kms_key_arn                   = each.value.kms_key_arn != "" ? each.value.kms_key_arn : (var.ebs_encrypted ? data.aws_kms_alias.ebs[0].target_key_arn : "")

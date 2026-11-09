@@ -8,7 +8,7 @@ locals {
 
   # Recipes are immutable, so the name carries a hash of everything that defines
   # the recipe. Any change produces a fresh recipe instead of a version clash.
-  recipe_hash = substr(sha1(jsonencode([var.parent_image_arn, var.component_arns, var.cis_level, var.root_volume_size, var.ebs_encrypted, var.kms_key_arn])), 0, 8)
+  recipe_hash = substr(sha1(jsonencode([var.parent_image_arn, var.component_arns, var.stig_level, var.root_volume_size, var.ebs_encrypted, var.kms_key_arn])), 0, 8)
 }
 
 resource "aws_imagebuilder_image_recipe" "this" {
@@ -35,10 +35,10 @@ resource "aws_imagebuilder_image_recipe" "this" {
       component_arn = component.value
 
       dynamic "parameter" {
-        for_each = component.value == var.cis_component_arn ? [var.cis_level] : []
+        for_each = component.value == var.stig_component_arn ? [var.stig_level] : []
         content {
           name  = "Level"
-          value = parameter.value
+          value = title(parameter.value)
         }
       }
     }

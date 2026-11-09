@@ -1,14 +1,14 @@
 # RHEL 10 Golden Image Recipe
-# Golden AMI recipe for Red Hat Enterprise Linux 10
+# Golden AMI recipe for Red Hat Enterprise Linux 10 with CIS Level 2 compliance
 
 name: "RHEL 10 Golden Image"
-description: "Hardened RHEL 10 image with SSM Agent, CloudWatch Agent, and validation tests"
+description: "Hardened RHEL 10 image with STIG baseline + CIS Level 2 hardening, SSM Agent, CloudWatch Agent, and validation tests"
 
 os_family: "linux"
 
-parent_image_arn: "${aws_managed_images_prefix}:image/red-hat-enterprise-linux-10-x86/x.x.x"
-cis_component_arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
-cis_level: "level-2"
+parent_image_arn: "${aws_managed_prefix}:image/red-hat-enterprise-linux-10-x86/x.x.x"
+stig_component_arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
+stig_level: "high"
 
 root_volume_size: 100
 root_device_name: "/dev/xvda"
@@ -16,23 +16,23 @@ ebs_encrypted: false
 kms_key_arn: ""
 
 component_chain:
-  - arn: "${aws_managed_components_prefix}:component/update-linux/x.x.x"
+  - arn: "${aws_managed_prefix}:component/update-linux/x.x.x"
     phase: "build"
-  - arn: "${aws_managed_components_prefix}:component/aws-cli-version-2-linux/x.x.x"
+  - arn: "${aws_managed_prefix}:component/aws-cli-version-2-linux/x.x.x"
     phase: "build"
   - arn: "${custom_components_arns["linux-ssm-agent"]}"
     phase: "build"
-  - arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
+  - arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
     phase: "build"
     parameters:
-      Level: "Level 2"
+      Level: "High"
   - arn: "${custom_components_arns["linux-hardening"]}"
     phase: "build"
   - arn: "${custom_components_arns["linux-validate"]}"
     phase: "test"
-  - arn: "${aws_managed_components_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
+  - arn: "${aws_managed_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
     phase: "build"
-  - arn: "${aws_managed_components_prefix}:component/simple-boot-test-linux/x.x.x"
+  - arn: "${aws_managed_prefix}:component/simple-boot-test-linux/x.x.x"
     phase: "test"
 
 block_device_mappings: []
@@ -41,6 +41,7 @@ distribution_regions: []
 lifecycle_policy_count: 3
 
 tags:
-  Compliance: "CIS"
+  Compliance: "CIS-Level-2"
+  Baseline: "STIG-High"
   OSFamily: "Linux"
   BaseOS: "RHEL-10"
