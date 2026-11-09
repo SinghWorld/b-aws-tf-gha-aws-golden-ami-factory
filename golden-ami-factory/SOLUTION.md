@@ -2,10 +2,11 @@
 
 ## Executive Summary
 
-This document outlines the challenges and architectural solutions for distributing golden AMIs from **1 source account** to **12 target accounts** (with extensibility for future accounts) using the existing Terraform-based Image Builder factory.
+This document outlines the architectural challenges and solutions for distributing golden AMIs from **1 source account** to **12 target accounts** (with extensibility for future accounts) using the existing Terraform-based EC2 Image Builder factory.
 
-**Current State**: Single-account deployment using AWS managed KMS key (`alias/aws/ebs`)
-**Target State**: 13-account distribution (1 source + 12 targets) with enterprise-grade security, operations, and extensibility
+**Current State**: Single-account deployment using AWS managed KMS key (`alias/aws/ebs`)  
+**Target State**: 13-account distribution (1 source + 12 targets) with enterprise-grade security, operations, and extensibility  
+**Architecture Pattern**: Hub-and-spoke with GitOps-driven account onboarding
 
 ---
 
@@ -599,6 +600,7 @@ golden-ami-factory/
 
 ---
 
-*Document Version: 1.0*  
+*Document Version: 2.0*  
 *Author: Platform Engineering*  
-*Review Cycle: Quarterly or on major architecture change*
+*Review Cycle: Quarterly or on major architecture change*  
+*Classification: Internal - Platform Team*

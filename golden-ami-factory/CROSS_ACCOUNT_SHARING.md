@@ -1,8 +1,8 @@
-# Cross-Account AMI Sharing - Modular Approach
+# Cross-Account AMI Sharing - Enterprise Guide
 
 ## Overview
 
-This project uses **AWS Image Builder's native cross-account distribution** to automatically share AMIs with target accounts during pipeline execution. No separate Terraform configuration or apply is required.
+This project uses **AWS EC2 Image Builder's native cross-account distribution** to automatically share AMIs with target accounts during pipeline execution. No separate Terraform configuration or apply is required beyond the initial setup.
 
 ## How It Works
 
@@ -51,11 +51,11 @@ variable "target_account_ids" {
 }
 ```
 
-## Adding More Accounts (Modular Approach)
+## Adding More Accounts
 
 To add more AWS accounts for AMI distribution:
 
-### Option 1: Update the Default (Recommended for permanent additions)
+### Option 1: Update the Default (Recommended for Permanent Additions)
 
 Edit `environments/prod/variables.tf` and add the account ID to the default list:
 
@@ -71,7 +71,7 @@ terraform apply
 
 The next pipeline execution will automatically share AMIs with the new account.
 
-### Option 2: Override via Command Line (For one-time or testing)
+### Option 2: Override via Command Line (For One-Time or Testing)
 
 ```bash
 cd environments/prod
@@ -106,6 +106,11 @@ aws ssm get-parameter --name "/golden-ami/rhel-9/latest" --region us-east-1
 ```
 
 The parameter value will be the AMI ID shared from the source account.
+
+```bash
+# List shared AMIs in target account
+aws ec2 describe-images --owners 732533289325 --filters "Name=name,Values=jq-golden-ami-*" --region us-east-1
+```
 
 ## Architecture Benefits
 
@@ -165,3 +170,85 @@ resource "aws_iam_role_policy_attachment" "distribution" {
 
 For enterprise deployments, consider using **AWS Organizations** + **StackSets** to automatically deploy the cross-account role to all accounts tagged with `GoldenAMI = true`.
 
+## Encryption Considerations
+
+### Default (Unencrypted)
+- Works out of the box for cross-account sharing
+- No KMS configuration required
+- AMIs are unencrypted in all accounts
+
+### Encrypted AMIs (Customer Managed Keys)
+When `var.ebs_encrypted = true`:
+
+1. **Source Account**: Requires customer managed KMS key (`var.ebs_kms_key_alias`)
+2. **Key Policy**: Must allow `imagebuilder.amazonaws.com` and target accounts
+3. **Target Accounts**: Image Builder re-encrypts with each target's KMS key
+4. **Target KMS**: Each target needs a KMS key accessible by Image Builder
+
+```hcl
+# Source account key policy must include:
+{
+  "Sid": "AllowImageBuilder",
+  "Effect": "Allow",
+  "Principal": { "Service": "imagebuilder.amazonaws.com" },
+  "Action": [
+    "kms:Encrypt",
+    "kms:Decrypt",
+    "kms:ReEncrypt*",
+    "kms:GenerateDataKey*",
+    "kms:DescribeKey"
+  ],
+  "Resource": "*"
+}
+
+# Plus cross-account access for each target:
+{
+  "Sid": "AllowTargetAccounts",
+  "Effect": "Allow",
+  "Principal": { "AWS": ["arn:aws:iam::TARGET_ACCOUNT_1:root", ...] },
+  "Action": [
+    "kms:Decrypt",
+    "kms:DescribeKey",
+    "kms:ReEncrypt*",
+    "kms:GenerateDataKey*"
+  ],
+  "Resource": "*"
+}
+```
+
+## Limits & Quotas
+
+| Limit | Default | Notes |
+|-------|---------|-------|
+| AMI sharing per AMI | 50 accounts | Request increase via AWS Support |
+| AMI copy per region | 50 concurrent | Per account limit |
+| KMS key policy size | 32 KB | May need multiple statements for many accounts |
+
+## Troubleshooting
+
+### AMI Not Shared
+```bash
+# Check launch permissions in target account
+aws ec2 describe-image-attribute --image-id ami-xxxxx --attribute launchPermission --region us-east-1
+```
+
+### SSM Parameter Missing in Target
+```bash
+# Verify execution role has ssm:PutParameter in target
+aws iam simulate-principal-policy --policy-source-arn <execution-role-arn> --action-names ssm:PutParameter --resource-arns "arn:aws:ssm:us-east-1:TARGET_ACCOUNT:parameter/golden-ami/*"
+```
+
+### KMS Access Denied
+- Verify source KMS key policy allows target accounts
+- Verify target KMS key allows `imagebuilder.amazonaws.com`
+- Check CloudTrail for `KMS.Decrypt` events
+
+## Future Enhancement: accounts.yaml (Planned)
+
+For dynamic, GitOps-friendly account management, see `SOLUTION.md` for the planned `accounts.yaml` approach that will replace static `target_account_ids` with a declarative account registry.
+
+---
+
+*Document Version: 2.0*  
+*Author: Platform Engineering*  
+*Last Updated: 2025-11-06*
