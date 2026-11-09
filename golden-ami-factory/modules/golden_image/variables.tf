@@ -56,18 +56,18 @@ variable "component_arns" {
   type        = list(string)
 }
 
-variable "stig_component_arn" {
-  description = "Amazon-managed STIG component ARN that receives the configured Level parameter."
+variable "cis_component_arn" {
+  description = "Amazon-managed CIS component ARN that receives the configured Level parameter."
   type        = string
 }
 
-variable "stig_level" {
-  description = "STIG severity passed to the Amazon-managed component's Level parameter."
+variable "cis_level" {
+  description = "CIS level passed to the Amazon-managed component's Level parameter (level-1 or level-2)."
   type        = string
 
   validation {
-    condition     = contains(["low", "medium", "high"], var.stig_level)
-    error_message = "stig_level must be low, medium or high."
+    condition     = contains(["level-1", "level-2"], var.cis_level)
+    error_message = "cis_level must be level-1 or level-2."
   }
 }
 

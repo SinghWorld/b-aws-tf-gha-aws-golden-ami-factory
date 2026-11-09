@@ -6,15 +6,15 @@ description: "Hardened RHEL 8 image with SSM Agent, CloudWatch Agent, and valida
 
 os_family: "linux"
 
-# Parent image: AWS-managed RHEL 8 base image
+# Parent image: AWS-managed RHEL 8 base image (uses deployment region)
 # Uses x.x.x to always pick the latest available version
-parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-8-x86/x.x.x"
+parent_image_arn: "${aws_managed_images_prefix}:image/red-hat-enterprise-linux-8-x86/x.x.x"
 
-# STIG component ARN (AWS-managed)
-stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+# CIS component ARN (AWS-managed, uses us-east-1 where CIS components are published)
+cis_component_arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
 
-# STIG level: low, medium, or high
-stig_level: "medium"
+# CIS level: level-1 or level-2
+cis_level: "level-2"
 
 # Root volume configuration
 root_volume_size: 100
@@ -39,11 +39,11 @@ component_chain:
   - arn: "${custom_components_arns["linux-ssm-agent"]}"
     phase: "build"
 
-  # 4. STIG hardening (AWS-managed, receives stig_level parameter)
-  - arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
+  # 4. CIS hardening (AWS-managed, receives cis_level parameter)
+  - arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
     phase: "build"
     parameters:
-      Level: "Medium"
+      Level: "Level 2"
 
   # 5. Extra hardening (custom component)
   - arn: "${custom_components_arns["linux-hardening"]}"
@@ -75,6 +75,6 @@ lifecycle_policy_count: 3
 
 # Optional: Additional tags
 tags:
-  Compliance: "STIG"
+  Compliance: "CIS"
   OSFamily: "Linux"
   BaseOS: "RHEL-8"

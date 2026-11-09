@@ -20,8 +20,9 @@ module "recipe_registry" {
   source                      = "../../modules/recipe_registry"
   recipes_path                = "${path.module}/../../modules/recipe_registry/recipes"
   custom_components_arns      = module.components.arns
-  aws_managed_components_prefix = local.jq_prefix
-  default_stig_level          = var.stig_level
+  aws_managed_components_prefix = local.aws_managed_prefix
+  aws_managed_images_prefix   = local.jq_prefix
+  default_cis_level           = var.cis_level
   default_root_volume_size    = 100
   tags                        = local.common_tags
   enabled_recipes             = var.enabled_recipes
@@ -32,19 +33,20 @@ module "golden_image" {
   for_each = module.recipe_registry.recipes
 
   name_prefix                   = local.name_prefix
+  # Recipe key is now clean (e.g., "rhel-9") without compliance suffix
   os_key                        = each.key
   os_family                     = each.value.os_family
   display_name                  = each.value.name
-  # Derive ami_os_code from recipe key (e.g., "rhel-9-stig-medium" -> "rhel9")
-ami_os_code                   = replace(each.key, "-stig-(low|medium|high)", "")
+  # ami_os_code from recipe key (e.g., "rhel-9" -> "rhel9")
+  ami_os_code                   = replace(each.key, "-", "")
   ami_name_prefix               = var.ami_name_prefix
   ami_architecture              = var.ami_architecture
   ami_date_token                = local.ami_date_token
   ami_release_version           = var.ami_release_version
   parent_image_arn              = each.value.parent_image_arn
   component_arns                = each.value.component_arns
-  stig_component_arn            = each.value.stig_component_arn
-  stig_level                    = each.value.stig_level
+  cis_component_arn             = each.value.cis_component_arn
+  cis_level                     = each.value.cis_level
   root_volume_size              = each.value.root_volume_size
   ebs_encrypted                 = each.value.ebs_encrypted
   kms_key_arn                   = each.value.kms_key_arn != "" ? each.value.kms_key_arn : (var.ebs_encrypted ? data.aws_kms_alias.ebs[0].target_key_arn : "")
@@ -56,6 +58,7 @@ ami_os_code                   = replace(each.key, "-stig-(low|medium|high)", "")
   instance_profile_name         = module.foundation.instance_profile_name
   imagebuilder_execution_role_arn = module.foundation.imagebuilder_execution_role_arn
 
+  # SSM parameter uses clean recipe key
   ssm_parameter_name            = "${var.ssm_parameter_prefix}/${each.key}/latest"
   target_account_ids            = var.target_account_ids
   schedule_expression           = var.pipeline_schedule_expression

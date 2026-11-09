@@ -23,8 +23,9 @@ locals {
   # Template variables for interpolation
   template_vars = {
     aws_managed_components_prefix = var.aws_managed_components_prefix
+    aws_managed_images_prefix     = var.aws_managed_images_prefix
     custom_components_arns        = var.custom_components_arns
-    default_stig_level            = var.default_stig_level
+    default_cis_level             = var.default_cis_level
     default_root_volume_size      = var.default_root_volume_size
   }
 
@@ -52,7 +53,7 @@ locals {
       component_chain    = config.component_chain
 
       # Optional fields with defaults
-      stig_level                    = coalesce(config.stig_level, var.default_stig_level)
+      cis_level                    = coalesce(config.cis_level, var.default_cis_level)
       root_volume_size              = coalesce(config.root_volume_size, var.default_root_volume_size)
       root_device_name              = coalesce(config.root_device_name, "/dev/sda1")
       ebs_encrypted                 = coalesce(config.ebs_encrypted, false)
@@ -64,7 +65,7 @@ locals {
       tags                          = merge(var.tags, config.tags)
 
       # Computed fields
-      stig_component_arn = config.stig_component_arn
+      cis_component_arn = config.cis_component_arn
     }
   }
 

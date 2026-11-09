@@ -1,10 +1,10 @@
 locals {
   definitions = {
     windows-ssm-agent = { platform = "Windows", file = "windows-ssm-agent.yml", description = "Checks and reports the Amazon SSM Agent version on Windows" }
-    windows-hardening = { platform = "Windows", file = "windows-hardening.yml", description = "Extra Windows hardening after the STIG component" }
+    windows-hardening = { platform = "Windows", file = "windows-hardening.yml", description = "Extra Windows hardening after the CIS component" }
     windows-validate  = { platform = "Windows", file = "windows-validate.yml", description = "Windows baseline validation tests" }
     linux-ssm-agent   = { platform = "Linux", file = "linux-ssm-agent.yml", description = "Installs or upgrades the Amazon SSM Agent on RHEL" }
-    linux-hardening   = { platform = "Linux", file = "linux-hardening.yml", description = "Extra RHEL hardening after the STIG component" }
+    linux-hardening   = { platform = "Linux", file = "linux-hardening.yml", description = "Extra RHEL hardening after the CIS component" }
     linux-validate    = { platform = "Linux", file = "linux-validate.yml", description = "RHEL baseline validation tests" }
   }
 }

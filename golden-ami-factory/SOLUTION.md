@@ -104,7 +104,7 @@ This document outlines the architectural challenges and solutions for distributi
 
 | Challenge | Impact | Current Gap |
 |-----------|--------|-------------|
-| **STIG level uniform across all accounts** | Some accounts may need different hardening | Single `stig_level` variable |
+| **CIS level uniform across all accounts** | Some accounts may need different hardening | Single `cis_level` variable |
 | **Component version pinning** | `x.x.x` = latest, causes drift between builds | No version lock for audit |
 | **AMI compliance validation post-distribution** | No verification that target AMIs match source | Trust-but-verify gap |
 | **Encryption at rest enforcement** | All accounts must enforce EBS encryption | Not validated |
@@ -198,7 +198,7 @@ accounts:
     ami_distribution:
       enabled: true
       retention_count: 6
-      stig_level: "high"
+      cis_level: "high"
     networking:
       vpc_id: "vpc-xxxxxxxx"
       subnet_ids: ["subnet-aaa", "subnet-bbb"]
@@ -218,7 +218,7 @@ accounts:
     ami_distribution:
       enabled: true
       retention_count: 3
-      stig_level: "medium"
+      cis_level: "medium"
     # ... etc
 ```
 
@@ -423,7 +423,7 @@ resource "aws_imagebuilder_lifecycle_policy" "target" {
 - [ ] Create `accounts.yaml` with all 12 accounts
 - [ ] Refactor locals to read from `accounts.yaml`
 - [ ] Make distribution configuration dynamic per account/region
-- [ ] Add per-account retention/stig_level/networking overrides
+- [ ] Add per-account retention/cis_level/networking overrides
 - [ ] Test full 12-account distribution
 
 ### Phase 3: Observability (Week 3-4)
@@ -472,7 +472,7 @@ accounts:
     ami_distribution:
       enabled: true                       # Default: true
       retention_count: 3                  # Default: 3
-      stig_level: "medium"                # Default: medium
+      cis_level: "medium"                # Default: medium
     networking:                           # Optional - uses defaults if omitted
       vpc_id: "vpc-xxx"
       subnet_ids: ["subnet-xxx"]
@@ -543,7 +543,7 @@ aws ssm start-automation-execution \
 - [ ] SSM parameters encrypted (SecureString)
 - [ ] VPC endpoints for KMS/S3/SSM in all accounts
 - [ ] Build instances use IMDSv2
-- [ ] STIG components validated post-distribution
+- [ ] CIS components validated post-distribution
 - [ ] Audit logging via CloudTrail in all accounts
 
 ---

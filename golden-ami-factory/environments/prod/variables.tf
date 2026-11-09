@@ -48,7 +48,7 @@ variable "enabled_os" {
 }
 
 variable "enabled_recipes" {
-  description = "Recipe keys to enable from the recipe registry. Empty means all recipes in index.yaml. Example: ['rhel-9-stig-medium', 'windows-2025-stig-medium']"
+  description = "Recipe keys to enable from the recipe registry. Empty means all recipes in index.yaml. Example: ['rhel-9-cis-level-2', 'windows-2025-cis-level-2']"
   type        = list(string)
   default     = []
 }
@@ -81,14 +81,14 @@ variable "ebs_kms_key_alias" {
   default     = "alias/aws/ebs"
 }
 
-variable "stig_level" {
-  description = "Amazon-managed STIG component level passed to its Level parameter."
+variable "cis_level" {
+  description = "Amazon-managed CIS component level passed to its Level parameter (level-1 or level-2)."
   type        = string
-  default     = "medium"
+  default     = "level-2"
 
   validation {
-    condition     = contains(["low", "medium", "high"], var.stig_level)
-    error_message = "stig_level must be low, medium or high."
+    condition     = contains(["level-1", "level-2"], var.cis_level)
+    error_message = "cis_level must be level-1 or level-2."
   }
 }
 

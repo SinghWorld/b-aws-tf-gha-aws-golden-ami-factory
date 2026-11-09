@@ -10,8 +10,7 @@ recipes:
   - windows-2025
 
 # Example additional recipes (uncomment to enable):
-#   - rhel-9-stig-high
-#   - rhel-9-cis
+#   - rhel-9-cis-level-1
 #   - ubuntu-2204-cis
-#   - amazon-linux-2023-stig-medium
+#   - amazon-linux-2023-cis
 #   - windows-2025-pci-dss
