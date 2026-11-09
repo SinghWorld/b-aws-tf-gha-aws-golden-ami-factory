@@ -733,7 +733,9 @@ b-aws-tf-gha-aws-golden-ami-factory/
 
 - **Architecture Design**: [`golden-ami-factory/SOLUTION.md`](golden-ami-factory/SOLUTION.md)
 - **Cross-Account Guide**: [`golden-ami-factory/CROSS_ACCOUNT_SHARING.md`](golden-ami-factory/CROSS_ACCOUNT_SHARING.md)
-- **Project Instructions**: [`CLAUDE.md`](CLAUDE.md)
+<!-- This is a single-line comment 
+-  **Project Instructions**: [`CLAUDE.md`](CLAUDE.md)
+-->
 
 ### AWS Documentation References
 - [EC2 Image Builder User Guide](https://docs.aws.amazon.com/imagebuilder/latest/userguide/)
