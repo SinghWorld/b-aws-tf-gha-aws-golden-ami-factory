@@ -6,7 +6,7 @@ description: "Hardened Windows Server 2022 image with SSM Agent, CloudWatch Agen
 
 os_family: "windows"
 
-parent_image_arn: "${aws_managed_components_prefix}:image/windows-server-2022-english-full-base-x86/x.x.x"
+parent_image_arn: "${aws_managed_images_prefix}:image/windows-server-2022-english-full-base-x86/x.x.x"
 cis_component_arn: "${aws_managed_components_prefix}:component/cis-build-windows/x.x.x"
 cis_level: "level-2"
 

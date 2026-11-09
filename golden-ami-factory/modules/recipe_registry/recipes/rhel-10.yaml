@@ -6,7 +6,7 @@ description: "Hardened RHEL 10 image with SSM Agent, CloudWatch Agent, and valid
 
 os_family: "linux"
 
-parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-linux-10-x86/x.x.x"
+parent_image_arn: "${aws_managed_images_prefix}:image/red-hat-enterprise-linux-10-x86/x.x.x"
 cis_component_arn: "${aws_managed_components_prefix}:component/cis-build-linux/x.x.x"
 cis_level: "level-2"
 
