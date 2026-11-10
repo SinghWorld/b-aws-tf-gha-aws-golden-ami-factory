@@ -1,0 +1,177 @@
+# =============================================================================
+# AWS Golden AMI Factory - Production Configuration
+# =============================================================================
+# All configurable values should be set in this file.
+# This is the SINGLE SOURCE OF TRUTH for environment-specific configuration.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# DEPLOYMENT TARGETS
+# -----------------------------------------------------------------------------
+# Define AWS accounts and regions that can be selected as Terraform deployment targets.
+# The account_id should be the TARGET account where resources are created (e.g., Development account).
+deployments = {
+  jetstarairwaysnonprod_syd = {
+    account_name = "Development"
+    account_id   = "732533289325"  # Development account - where AMIs are built
+    aws_region   = "ap-southeast-2"  # Build region
+  }
+}
+
+# Which deployment target to use (must match a key in deployments)
+deployment_name = "jetstarairwaysnonprod_syd"
+
+# -----------------------------------------------------------------------------
+# NETWORK CONFIGURATION
+# -----------------------------------------------------------------------------
+# VPC and private subnet for Image Builder build instances.
+# Needs outbound internet or VPC endpoints for SSM, S3, and package repos.
+vpc_id    = "vpc-09cf7e58fed19e679"    # My Personal Sydney
+subnet_id = "subnet-0dec91c430f1e51e7" # apse2-az1 (ap-southeast-2a)
+
+# -----------------------------------------------------------------------------
+# PROJECT METADATA & TAGS
+# -----------------------------------------------------------------------------
+project = "jq-golden-ami"
+
+# Common tags applied to all resources
+# Override any of these in extra_tags if needed
+common_tags = {
+  CostCentre  = "579087"
+  CreatedBy   = "DL-TechInfraCloud@singhworld.com"
+  Environment = "Production"
+  DeployedBy  = "IAC using Terraform"
+  Owner       = "DL-TechInfraCloud@singhworld.com"
+  ProtectedBy = "Tech-Infra-Cloud@singhworld.com"
+}
+
+# Additional tags merged with common_tags
+extra_tags = {}
+
+# -----------------------------------------------------------------------------
+# EC2 INFRASTRUCTURE
+# -----------------------------------------------------------------------------
+# Existing EC2 key pair name in the deployment account and region for Image Builder instances
+key_pair_name = "MYLABKEY"
+
+# S3 bucket for Image Builder logs (optional, leave empty to use default)
+log_bucket_name = ""
+
+# -----------------------------------------------------------------------------
+# EBS ENCRYPTION
+# -----------------------------------------------------------------------------
+# Whether to encrypt EBS volumes and output AMI snapshots
+ebs_encrypted = false
+
+# KMS key alias for EBS encryption
+# Use "alias/aws/ebs" for AWS managed key, or a customer managed key alias (e.g., "alias/ebs-golden")
+# Only used when ebs_encrypted = true
+ebs_kms_key_alias = "alias/aws/ebs"
+
+# -----------------------------------------------------------------------------
+# AMI NAMING CONVENTION
+# -----------------------------------------------------------------------------
+# Prefix for published AMI names
+ami_name_prefix = "jq-golden-ami"
+
+# Architecture token included in published AMI names
+ami_architecture = "x86_64"
+
+# Date format for dynamic AMI date token (Terraform formatdate pattern)
+# Options: "YYMM" (default), "YYYYMM", "YYYYMMDD", etc.
+ami_date_format = "YYMM"
+
+# Optional YYMM AMI date token override. Null derives from Terraform plan timestamp.
+ami_date_token = null
+
+# Release number appended after the monthly date token (e.g., 1 produces YYMM.1)
+ami_release_version = "1"
+
+# SSM Parameter Store prefix for the latest-AMI parameters
+ssm_parameter_prefix = "/golden-ami"
+
+# -----------------------------------------------------------------------------
+# COMPLIANCE & HARDENING
+# -----------------------------------------------------------------------------
+# STIG severity level for AWS-managed STIG component (low, medium, high)
+stig_level = "high"
+
+# -----------------------------------------------------------------------------
+# RECIPE SELECTION (New Recipe Registry)
+# -----------------------------------------------------------------------------
+# Recipe keys to enable from the recipe registry. Empty means all recipes in index.yaml.
+# Available recipes: rhel-8, rhel-9, rhel-10, windows-2022, windows-2025
+enabled_recipes = ["rhel-8", "rhel-9", "rhel-10", "windows-2022", "windows-2025"]
+
+# LEGACY: enabled_os (use enabled_recipes for new recipe registry)
+# enabled_os = ["rhel-8", "rhel-9", "rhel-10", "windows-2022", "windows-2025"]
+enabled_os = []
+
+# -----------------------------------------------------------------------------
+# DEFAULT RECIPE SETTINGS (Used by Recipe Registry as defaults)
+# These can be overridden per-recipe in the YAML files
+# -----------------------------------------------------------------------------
+# Default root volume size in GB
+default_root_volume_size = 100
+
+# Default lifecycle policy count (number of AMIs to retain)
+default_lifecycle_policy_count = 2
+
+# Default STIG level (overridden by stig_level above if set)
+default_stig_level = "high"
+
+# -----------------------------------------------------------------------------
+# CROSS-ACCOUNT AMI SHARING
+# -----------------------------------------------------------------------------
+# Target AWS account IDs for cross-account AMI distribution.
+# Image Builder will automatically share AMIs and create SSM parameters in these accounts.
+target_account_ids = ["774133226694", "373160674113"]
+
+# -----------------------------------------------------------------------------
+# INSTANCE TYPES (Cost-optimized defaults)
+# -----------------------------------------------------------------------------
+# Instance types for Windows builds (fallback order)
+windows_instance_types = ["t3.large", "t3a.large"]
+
+# Instance types for Linux builds (fallback order)
+linux_instance_types = ["t3.large", "t3a.large"]
+
+# -----------------------------------------------------------------------------
+# PIPELINE SCHEDULING
+# -----------------------------------------------------------------------------
+# Native Image Builder cron expression (e.g., "cron(0 3 1 * ? *)" for monthly on 1st at 03:00 UTC)
+# Null means the monthly GitHub workflow starts the builds externally.
+pipeline_schedule_expression = "cron(0 3 1 * ? *)"
+
+# Timezone for the schedule expression
+schedule_timezone = "Australia/Sydney"
+
+# -----------------------------------------------------------------------------
+# TEST & LIFECYCLE SETTINGS
+# -----------------------------------------------------------------------------
+# Test timeout in minutes
+test_timeout_minutes = 120
+
+# Number of newest images to retain per OS (0 disables lifecycle policy)
+images_to_retain = 2
+
+# -----------------------------------------------------------------------------
+# ADVANCED SETTINGS
+# -----------------------------------------------------------------------------
+# Root device name for Linux (typically /dev/xvda or /dev/sda1)
+linux_root_device_name = "/dev/xvda"
+
+# Root device name for Windows (typically /dev/sda1)
+windows_root_device_name = "/dev/sda1"
+
+# Enable CloudWatch Agent installation (uses AWS-managed component)
+install_cloudwatch_agent = true
+
+# Enable boot verification test (uses AWS-managed component)
+enable_boot_test = true
+
+# Enable STIG hardening component (AWS-managed)
+enable_stig = true
+
+# Component version for custom components (managed by content hash)
+component_version = "1.0.0"
