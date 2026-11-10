@@ -14,5 +14,5 @@ graphify-out
 graphify-out/*
 *graphify-out
 .claude
-CLAUDE.md
+!*CLAUDE.md
 *.claude/*
