@@ -1,148 +1,163 @@
-# Multi-Account Golden AMI Factory - Enterprise Solution Design
+# 🏗️ Multi-Account Golden AMI Factory - Enterprise Solution Design
 
-## Executive Summary
-
-This document outlines the architecture for distributing golden AMIs from **1 source account** to **2 target accounts** (with extensibility for future accounts) using the existing Terraform-based EC2 Image Builder factory.
-
-**Current State**: Multi-account deployment using AWS managed KMS key (`alias/aws/ebs`) with no encryption  
-**Target State**: 3-account distribution (1 source + 2 targets) with enterprise-grade security, operations, and extensibility  
-**Architecture Pattern**: Hub-and-spoke with declarative target account configuration
+> **Version:** 2.1 | **Last Updated:** 2025-11-09 | **Author:** Platform Engineering  
+> **Classification:** Internal - Platform Team
 
 ---
 
-## 1. Current Implementation Status
+## 📋 Executive Summary
 
-### 1.1 What Works Today
+This document outlines the architecture for distributing hardened, compliant Golden AMIs from **1 source account** to **2 target accounts** (with extensibility for future accounts) using the existing Terraform-based **EC2 Image Builder** factory.
 
-| Feature | Status | Details |
-|---------|--------|---------|
-| **Cross-account AMI sharing** | ✅ Working | Native Image Builder `target_account_ids` |
-| **SSM parameter replication** | ✅ Working | Parameters created in source + target accounts |
-| **Custom components** | ✅ Working | 6 components (Linux/Windows hardening, SSM, validation) |
-| **Recipe registry** | ✅ Working | YAML-based declarative recipes |
-| **Lifecycle policies** | ✅ Working | Retains 3 AMIs per OS |
-| **STIG compliance** | ✅ Working | Configurable level (default: high) |
-| **Security group egress** | ✅ Fixed | Uses `aws_security_group_rule` to avoid drift |
-
-### 1.2 Current Configuration
-
-**Source Account**: 732533289325 (Development) - **ap-southeast-2**  
-**Target Accounts**: 
-- 774133226694 (Production)
-- 373160674113 (Management)
-
-**OS Support**: RHEL 8, RHEL 9, RHEL 10, Windows Server 2022, Windows Server 2025
+| Aspect | Current State | Target State |
+|--------|--------------|--------------|
+| **Distribution** | 1 source → 2 targets | 1 source → N targets (extensible) |
+| **Encryption** | Disabled (AWS managed KMS) | Customer managed KMS (when enabled) |
+| **Compliance** | STIG High (CIS Level 2) | Configurable per account/OS |
+| **Automation** | Monthly scheduled + manual | Event-driven + scheduled |
 
 ---
 
-## 2. Core Challenges & Solutions
+## 🎯 Current Implementation Status
+
+### ✅ What Works Today
+
+| Feature | Status | Implementation |
+|---------|--------|----------------|
+| ![Cross-Account](https://img.shields.io/badge/Cross--Account-Working-brightgreen) | **Working** | Native Image Builder `target_account_ids` |
+| ![SSM](https://img.shields.io/badge/SSM_Parameter-Replication-brightgreen) | **Working** | Parameters in source + all target accounts |
+| ![Components](https://img.shields.io/badge/Custom_Components-6_Active-brightgreen) | **Working** | 6 components (Linux/Windows: SSM, Hardening, Validation) |
+| ![Recipes](https://img.shields.io/badge/Recipe_Registry-Declarative-brightgreen) | **Working** | YAML-based with template interpolation |
+| ![Lifecycle](https://img.shields.io/badge/Lifecycle_Policies-Active-brightgreen) | **Working** | Retains 3 AMIs per OS (configurable) |
+| ![STIG](https://img.shields.io/badge/STIG_Compliance-High-brightgreen) | **Working** | Configurable: low/medium/high |
+| ![Security](https://img.shields.io/badge/Security_Group-Drift_Free-brightgreen) | **Fixed** | Uses `aws_security_group_rule` resources |
+
+### 📊 Current Configuration
+
+| Account | ID | Role | Region |
+|---------|-----|------|--------|
+| ![AWS](https://img.shields.io/badge/Source_Account-Development-orange) | `732533289325` | **Build Account** | `ap-southeast-2` |
+| ![AWS](https://img.shields.io/badge/Target_Account-Production-blue) | `774133226694` | **Consumer** | `ap-southeast-2` |
+| ![AWS](https://img.shields.io/badge/Target_Account-Management-purple) | `373160674113` | **Consumer** | `ap-southeast-2` |
+
+**Supported Operating Systems:**
+- 🐧 **Linux:** RHEL 8, RHEL 9, RHEL 10
+- 🪟 **Windows:** Windows Server 2022, Windows Server 2025
+
+---
+
+## 🔐 Core Challenges & Solutions
 
 ### 2.1 KMS Encryption & Cross-Account Snapshot Sharing
 
 | Challenge | Current State | Future Enhancement |
 |-----------|---------------|-------------------|
-| **AWS managed keys (`alias/aws/ebs`) are account-scoped** | Encryption disabled (default: false) | Customer managed key with cross-account policy |
-| **No cross-account key policy on AWS managed keys** | N/A - not using encryption | Required for encrypted multi-account |
-| **Image Builder re-encryption behavior** | N/A | Will work with customer managed keys |
-| **Key rotation & lifecycle** | N/A | Need key rotation strategy with alias stability |
+| ![Key](https://img.shields.io/badge/AWS_Managed_Keys-Account_Scoped-red) | Encryption **disabled** (`ebs_encrypted = false`) | Customer managed key with cross-account policy |
+| ![Lock](https://img.shields.io/badge/Cross--Account_Key_Policy-None-red) | N/A - not using encryption | Required for encrypted multi-account |
+| ![Refresh](https://img.shields.io/badge/Re--Encryption_Behavior-None-red) | N/A | Works with customer managed keys |
+| ![Rotate](https://img.shields.io/badge/Key_Rotation-None-red) | N/A | Need rotation strategy with alias stability |
 
-**Current Decision**: EBS encryption is **disabled by default** (`ebs_encrypted = false`) to enable seamless cross-account sharing without KMS complexity. When encryption is needed, a customer managed KMS key with proper cross-account policies must be created.
+> **💡 Current Decision:** EBS encryption is **disabled by default** to enable seamless cross-account sharing without KMS complexity. When encryption is required, a customer managed KMS key with proper cross-account policies must be created.
 
 ### 2.2 IAM & Cross-Account Permissions
 
 | Component | Implementation |
 |-----------|----------------|
-| **Image Builder execution role** | Created in foundation module with dynamic cross-account assume role permissions |
-| **Target account role** | `EC2ImageBuilderDistributionCrossAccountRole` with `EC2ImageBuilderDistributionCrossAccountRolePolicy` |
-| **External ID** | Used for secure cross-account trust |
+| ![Shield](https://img.shields.io/badge/Image_Builder_Execution_Role-Created-brightgreen) | Foundation module with dynamic cross-account assume role permissions |
+| ![Shield](https://img.shields.io/badge/Target_Account_Role-EC2ImageBuilderDistributionCrossAccountRole-brightgreen) | With `EC2ImageBuilderDistributionCrossAccountRolePolicy` |
+| ![Shield](https://img.shields.io/badge/External_ID-imagebuilder--distribution-brightgreen) | Used for secure cross-account trust |
 
 ### 2.3 AMI Distribution Configuration
 
 | Aspect | Implementation |
 |--------|----------------|
-| **Target accounts** | Static list in `target_account_ids` variable (easily extensible) |
-| **Regions** | Single region (source region only) - multi-region planned |
-| **AMI naming** | Pattern: `{prefix}-{os}-{arch}-{YYMM}.{release}-{buildDate}` |
-| **Launch permissions** | Automatically managed by Image Builder |
+| ![Target](https://img.shields.io/badge/Target_Accounts-Static_List-blue) | `target_account_ids` variable (easily extensible) |
+| ![Globe](https://img.shields.io/badge/Regions-Single_Region-blue) | Source region only - multi-region planned |
+| ![Tag](https://img.shields.io/badge/AMI_Naming-Patternized-blue) | `{prefix}-{os}-{arch}-{YYMM}.{release}-{buildDate}` |
+| ![Share](https://img.shields.io/badge/Launch_Permissions-Auto_Managed-blue) | Automatically managed by Image Builder |
 
 ### 2.4 SSM Parameter Store Replication
 
-- ✅ Parameters created in source account: `/golden-ami/{os_key}/latest`
-- ✅ Parameters created in each target account with same name, account-specific AMI ID
-- ✅ Uses `aws:ec2:image` data type for CloudFormation compatibility
+- ✅ **Source Account:** `/golden-ami/{os_key}/latest`
+- ✅ **Target Accounts:** Same parameter name, account-specific AMI ID
+- ✅ **Data Type:** `aws:ec2:image` for CloudFormation compatibility
 
 ### 2.5 Lifecycle Management
 
-- ✅ Lifecycle policy retains 3 newest AMIs per OS (configurable via `images_to_retain`)
-- ✅ Runs in source account only
-- ⚠️ Target account cleanup not implemented (future enhancement)
+- ✅ **Retention:** 3 newest AMIs per OS (configurable via `images_to_retain`)
+- ✅ **Execution:** Source account only
+- ⚠️ **Future:** Target account cleanup not yet implemented
 
 ### 2.6 Networking & Connectivity
 
 | Component | Current State |
 |-----------|---------------|
-| **Build VPC/Subnet** | Single VPC in source account |
-| **Egress** | HTTP/HTTPS via security group rules |
-| **VPC Endpoints** | Assumed available for SSM, S3, package repos |
+| ![VPC](https://img.shields.io/badge/Build_VPC-Single_Account-orange) | Single VPC in source account |
+| ![Egress](https://img.shields.io/badge/Egress-HTTP/HTTPS-orange) | Via security group rules |
+| ![Endpoints](https://img.shields.io/badge/VPC_Endpoints-Assumed-orange) | For SSM, S3, package repos |
 
 ### 2.7 Security & Compliance
 
 | Feature | Implementation |
 |---------|----------------|
-| **STIG Level** | Configurable (low/medium/high) - default: high |
-| **Component Versioning** | Content-hashed names for immutability |
-| **IMDSv2** | Enforced on build instances |
-| **Encryption** | Optional (disabled by default) |
+| ![STIG](https://img.shields.io/badge/STIG_Level-Configurable-brightgreen) | low/medium/high (default: high) |
+| ![Hash](https://img.shields.io/badge/Component_Versioning-Content_Hashed-brightgreen) | Immutable via content hash |
+| ![IMDS](https://img.shields.io/badge/IMDSv2-Enforced-brightgreen) | On all build instances |
+| ![Lock](https://img.shields.io/badge/Encryption-Optional-blue) | Disabled by default |
 
 ---
 
-## 3. Architecture Diagram
+## 🏛️ Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         SOURCE ACCOUNT (Build Account)                      │
-│  Account: 732533289325  Region: ap-southeast-2                             │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────────┐  │
-│  │  Terraform State │    │  Image Builder   │    │  IAM Roles           │  │
-│  │  (S3 + DynamoDB) │───▶│  Pipelines       │───▶│  - Build Instance    │  │
-│  └──────────────────┘    └────────┬─────────┘    │  - Lifecycle         │  │
-│                                    │              │  - ImageBuilder Exec │  │
-│                                    ▼              └──────────────────────┘  │
-│                         ┌──────────────────┐                                │
-│                         │  Distribution    │                                │
-│                         │  Configuration   │                                │
-│                         └────────┬─────────┘                                │
-└─────────────────────────────────┼──────────────────────────────────────────┘
-                                  │
-         ┌────────────────────────┼────────────────────────┐
-         ▼                        ▼                        ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  TARGET ACCT 1  │    │  TARGET ACCT 2  │    │  TARGET ACCT N  │
-│  774133226694   │    │  373160674113   │    │  (Future)       │
-│  ┌───────────┐  │    │  ┌───────────┐  │    │  ┌───────────┐  │
-│  │ IAM Role  │  │    │  │ IAM Role  │  │    │  │ IAM Role  │  │
-│  │ (Trust)   │  │    │  │ (Trust)   │  │    │  │ (Trust)   │  │
-│  └─────┬─────┘  │    │  └─────┬─────┘  │    │  └─────┬─────┘  │
-│        │        │    │        │        │    │        │        │
-│  ┌─────┴─────┐  │    │  ┌─────┴─────┐  │    │  ┌─────┴─────┐  │
-│  │ Shared    │  │    │  │ Shared    │  │    │  │ Shared    │  │
-│  │ AMIs      │  │    │  │ AMIs      │  │    │  │ AMIs      │  │
-│  └─────┬─────┘  │    │  └─────┬─────┘  │    │  └─────┬─────┘  │
-│        │        │    │        │        │    │        │        │
-│  ┌─────┴─────┐  │    │  ┌─────┴─────┐  │    │  ┌─────┴─────┐  │
-│  │ SSM Param │  │    │  │ SSM Param │  │    │  │ SSM Param │  │
-│  │ (Latest)  │  │    │  │ (Latest)  │  │    │  │ (Latest)  │  │
-│  └───────────┘  │    │  └───────────┘  │    │  └───────────┘  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```mermaid
+graph TB
+    subgraph SA[🟠 SOURCE ACCOUNT - Development (732533289325)]
+        TF[📦 Terraform State<br/>S3 + DynamoDB]
+        IB[🏗️ Image Builder Pipelines]
+        IAM[🛡️ IAM Roles<br/>• Build Instance Role<br/>• Lifecycle Role<br/>• ImageBuilder Execution Role]
+        DIST[📤 Distribution Configuration]
+        
+        TF --> IB
+        IB --> DIST
+        IB --> IAM
+    end
+    
+    DIST -->|Cross-Account Sharing| TA1[🔵 TARGET 1 - Production (774133226694)]
+    DIST -->|Cross-Account Sharing| TA2[🟣 TARGET 2 - Management (373160674113)]
+    DIST -->|Extensible| TA3[⚪ TARGET N - Future Accounts]
+    
+    subgraph TA1
+        IAM1[🛡️ EC2ImageBuilderDistributionCrossAccountRole]
+        AMI1[📦 Shared AMIs]
+        SSM1[📋 SSM Parameter<br/>/golden-ami/{os}/latest]
+        IAM1 --> AMI1
+        IAM1 --> SSM1
+    end
+    
+    subgraph TA2
+        IAM2[🛡️ EC2ImageBuilderDistributionCrossAccountRole]
+        AMI2[📦 Shared AMIs]
+        SSM2[📋 SSM Parameter<br/>/golden-ami/{os}/latest]
+        IAM2 --> AMI2
+        IAM2 --> SSM2
+    end
+    
+    subgraph TA3
+        IAM3[🛡️ EC2ImageBuilderDistributionCrossAccountRole]
+        AMI3[📦 Shared AMIs]
+        SSM3[📋 SSM Parameter<br/>/golden-ami/{os}/latest]
+        IAM3 --> AMI3
+        IAM3 --> SSM3
+    end
 ```
 
 ---
 
-## 4. Implementation Details
+## ⚙️ Implementation Details
 
 ### 4.1 Target Account Bootstrap (Required Once Per Target)
 
-Each target account must have this role deployed:
+Each target account must deploy this IAM role **one time**:
 
 ```hcl
 # In TARGET ACCOUNT (run once):
@@ -172,17 +187,17 @@ resource "aws_iam_role_policy_attachment" "distribution" {
 
 ### 4.2 Source Account Configuration
 
-**File**: `environments/prod/variables.tf`
+**File:** `environments/prod/variables.tf`
 
 ```hcl
 variable "target_account_ids" {
   description = "Distribution accounts to share AMIs with"
   type        = list(string)
-  default     = ["774133226694", "373160674113"]  # Add more here
+  default     = ["774133226694", "373160674113"]  # Add more accounts here
 }
 ```
 
-**File**: `modules/foundation/main.tf` - Dynamic cross-account permissions
+**File:** `modules/foundation/main.tf` - Dynamic cross-account permissions
 
 ```hcl
 dynamic "statement" {
@@ -198,7 +213,7 @@ dynamic "statement" {
 
 ### 4.3 Distribution Configuration
 
-**File**: `modules/golden_image/main.tf`
+**File:** `modules/golden_image/main.tf`
 
 ```hcl
 distribution {
@@ -234,24 +249,25 @@ distribution {
 
 ---
 
-## 5. Extensibility - Adding New Accounts
+## 🚀 Extensibility - Adding New Accounts
 
-### 5.1 Quick Add (Current Method)
+### Quick Add (Current Method)
 
 ```bash
-# 1. Edit variables.tf
-default = ["774133226694", "373160674113", "NEW_ACCOUNT_ID"]
+# 1. Edit variables.tf or terraform.tfvars
+target_account_ids = ["774133226694", "373160674113", "NEW_ACCOUNT_ID"]
 
 # 2. Apply
+cd environments/prod
 terraform apply
 
 # 3. Deploy bootstrap role in NEW target account (one-time)
 # 4. Next pipeline run automatically shares to new account
 ```
 
-### 5.2 Planned Enhancement: accounts.yaml (Future)
+### Planned Enhancement: `accounts.yaml` (Future)
 
-For larger scale (10+ accounts), migrate to declarative `accounts.yaml`:
+For larger scale (10+ accounts), migrate to declarative configuration:
 
 ```yaml
 # accounts.yaml
@@ -269,91 +285,68 @@ accounts:
 
 ---
 
-## 6. Implementation Roadmap
+## 🗺️ Implementation Roadmap
 
-### Phase 1: Current - Stable Multi-Account ✅
-- [x] Cross-account sharing with 2 target accounts
-- [x] SSM parameter replication
-- [x] Lifecycle policies
-- [x] Security group egress fix
-- [x] Recipe registry with YAML
-
-### Phase 2: Encryption Support (When Needed)
-- [ ] Create customer managed KMS key in source account
-- [ ] Add cross-account key policy for target accounts
-- [ ] Create target account KMS keys
-- [ ] Enable `ebs_encrypted = true`
-- [ ] Test encrypted distribution
-
-### Phase 3: Dynamic Configuration (For 10+ Accounts)
-- [ ] Create `accounts.yaml` schema
-- [ ] Refactor locals to read from YAML
-- [ ] Dynamic distribution blocks per account/region
-- [ ] Per-account retention/CIS overrides
-
-### Phase 4: Observability
-- [ ] Central EventBridge bus
-- [ ] Cross-account EventBridge rules
-- [ ] CloudWatch dashboard
-- [ ] Build failure alerting
-
-### Phase 5: Operations
-- [ ] Drift detection Lambda
-- [ ] Automated rollback
-- [ ] Cost allocation tags
-- [ ] Runbook documentation
+| Phase | Status | Description |
+|-------|--------|-------------|
+| **Phase 1** | ✅ **Complete** | Stable multi-account (2 targets), SSM replication, lifecycle policies, SG egress fix, Recipe registry |
+| **Phase 2** | 🔄 **Planned** | Encryption support: customer managed KMS, cross-account key policies, encrypted distribution |
+| **Phase 3** | 📋 **Future** | Dynamic configuration: `accounts.yaml` schema, per-account retention/CIS overrides |
+| **Phase 4** | 📋 **Future** | Observability: Central EventBridge, CloudWatch dashboards, build failure alerting |
+| **Phase 5** | 📋 **Future** | Operations: Drift detection, automated rollback, cost allocation tags, runbooks |
 
 ---
 
-## 7. Cost Estimation (3 Accounts)
+## 💰 Cost Estimation (3 Accounts)
 
 | Component | Monthly Cost (Est.) |
 |-----------|---------------------|
-| AMI Storage (3 accts × 5 OS × 3 retained × ~5GB) | ~$35 |
-| Snapshot Copy (cross-account) | ~$12 |
-| KMS Keys (if encrypted) | ~$3 |
-| Image Builder Build (5 OS × monthly) | ~$200 |
-| CloudWatch/EventBridge | ~$15 |
+| 💾 AMI Storage (3 accts × 5 OS × 3 retained × ~5GB) | ~$35 |
+| 📸 Snapshot Copy (cross-account) | ~$12 |
+| 🔐 KMS Keys (if encrypted) | ~$3 |
+| 🏗️ Image Builder Build (5 OS × monthly) | ~$200 |
+| 📊 CloudWatch/EventBridge | ~$15 |
 | **Total Estimated** | **~$265/mo** |
 
 ---
 
-## 8. Security Checklist
+## 🔐 Security Checklist
 
-- [x] Build instances in private subnet, no inbound access
-- [x] IMDSv2 enforced
-- [x] Least-privilege IAM roles
-- [x] ExternalId for cross-account trust
-- [x] STIG hardening (configurable level)
-- [x] Component immutability via content hashing
-- [ ] KMS encryption (when enabled)
-- [ ] VPC endpoints for KMS/S3/SSM
-- [ ] CloudTrail logging in all accounts
+- ✅ Build instances in private subnet, no inbound access
+- ✅ IMDSv2 enforced
+- ✅ Least-privilege IAM roles
+- ✅ ExternalId for cross-account trust
+- ✅ STIG hardening (configurable level)
+- ✅ Component immutability via content hashing
+- ⬜ KMS encryption (when enabled)
+- ⬜ VPC endpoints for KMS/S3/SSM
+- ⬜ CloudTrail logging in all accounts
 
 ---
 
-## 9. File Structure
+## 📁 File Structure
 
 ```
 golden-ami-factory/
-├── CLAUDE.md                          # Project instructions
-├── SOLUTION.md                        # This file
-├── CROSS_ACCOUNT_SHARING.md           # Cross-account guide
-├── modules/
-│   ├── components/
-│   ├── foundation/                    # IAM, SG, SNS
-│   ├── golden_image/                  # Image Builder pipelines
-│   └── recipe_registry/               # YAML-based recipes
-└── environments/
-    └── prod/                          # Production config
-        ├── variables.tf               # target_account_ids here
-        ├── locals.tf
-        └── main.tf
+├── 📄 CONFIGURABLE_VALUES.md           # All tfvars reference
+├── 📄 SOLUTION.md                      # This file
+├── 📄 CROSS_ACCOUNT_SHARING.md         # Cross-account guide
+├── 📁 modules/
+│   ├── 📁 components/                  # Custom Image Builder components
+│   ├── 📁 foundation/                  # IAM, SG, SNS
+│   ├── 📁 golden_image/                # Image Builder pipelines
+│   └── 📁 recipe_registry/             # YAML-based recipes
+└── 📁 environments/
+    └── 📁 prod/                        # Production config
+        ├── 📄 variables.tf             # target_account_ids here
+        ├── 📄 locals.tf
+        ├── 📄 main.tf
+        └── 📄 terraform.tfvars         # Single source of truth
 ```
 
 ---
 
-## 10. Decision Log
+## 📝 Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
@@ -365,7 +358,7 @@ golden-ami-factory/
 
 ---
 
-## 11. Next Steps
+## ✅ Next Steps
 
 1. **Monitor** - Verify pipeline runs and cross-account sharing
 2. **Validate** - Check SSM parameters in all 3 accounts
@@ -375,7 +368,11 @@ golden-ami-factory/
 
 ---
 
-*Document Version: 2.1*  
-*Author: Platform Engineering*  
-*Last Updated: 2025-11-09*  
-*Classification: Internal - Platform Team*
+<div align="center">
+
+**📄 Document Version: 2.1**  
+**👤 Author: Platform Engineering**  
+**📅 Last Updated: 2025-11-09**  
+**🏷️ Classification: Internal - Platform Team**
+
+</div>

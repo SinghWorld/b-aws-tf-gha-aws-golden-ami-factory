@@ -1,30 +1,37 @@
-# Cross-Account AMI Sharing - Enterprise Guide
+# 🔄 Cross-Account AMI Sharing - Enterprise Guide
 
-## Overview
+> **Version:** 2.1 | **Last Updated:** 2025-11-09 | **Author:** Platform Engineering
+
+---
+
+## 📋 Overview
 
 This project uses **AWS EC2 Image Builder's native cross-account distribution** to automatically share AMIs with target accounts during pipeline execution. No separate Terraform configuration or apply is required beyond the initial setup.
 
-## Current Configuration
+### 🏷️ Current Configuration
 
-- **Source Account**: 732533289325 (Development) in **ap-southeast-2**
-- **Target Accounts**: 
-  - 774133226694 (Production)
-  - 373160674113 (Management)
-- **Encryption**: Disabled by default (`ebs_encrypted = false`) for seamless sharing
+| Account | ID | Role | Region |
+|---------|-----|------|--------|
+| 🟠 **Source** | `732533289325` | Development (Build) | `ap-southeast-2` |
+| 🔵 **Target 1** | `774133226694` | Production (Consumer) | `ap-southeast-2` |
+| 🟣 **Target 2** | `373160674113` | Management (Consumer) | `ap-southeast-2` |
 
-## How It Works
+### 🔐 Encryption Status
+> **Current:** Disabled by default (`ebs_encrypted = false`) for seamless sharing  
+> **Future:** Customer managed KMS keys when encryption enabled
 
-The `golden_image` module's `aws_imagebuilder_distribution_configuration` (in `modules/golden_image/main.tf`) handles everything:
+---
+
+## ⚙️ How It Works
+
+The `golden_image` module's `aws_imagebuilder_distribution_configuration` handles everything automatically:
 
 ```hcl
 resource "aws_imagebuilder_distribution_configuration" "this" {
-  # ...
-  
   distribution {
     region = data.aws_region.current.region
     
     ami_distribution_configuration {
-      # ... other settings ...
       target_account_ids = var.target_account_ids  # <-- Shares AMI with these accounts
     }
     
@@ -47,31 +54,29 @@ resource "aws_imagebuilder_distribution_configuration" "this" {
 }
 ```
 
-## Configuration
+---
 
-Target accounts are configured in **`environments/prod/variables.tf`**:
+## 🔧 Configuration
 
-```hcl
-variable "target_account_ids" {
-  description = "Distribution accounts to share AMIs with. Image Builder will automatically share AMIs and create SSM parameters in these accounts."
-  type        = list(string)
-  default     = ["774133226694", "373160674113"]
-}
-```
-
-## Adding More Accounts
-
-To add more AWS accounts for AMI distribution:
-
-### Option 1: Update the Default (Recommended for Permanent Additions)
-
-Edit `environments/prod/variables.tf` and add the account ID to the default list:
+Target accounts are configured in **`environments/prod/terraform.tfvars`** (single source of truth):
 
 ```hcl
-default     = ["774133226694", "373160674113", "NEW_ACCOUNT_ID_HERE"]
+target_account_ids = ["774133226694", "373160674113"]
 ```
 
-Then run:
+> **Note:** The `variables.tf` file defines the variable with validation, but actual values should be set in `terraform.tfvars`.
+
+---
+
+## ➕ Adding More Accounts
+
+### Option 1: Update `terraform.tfvars` (Recommended for Permanent Additions)
+
+```hcl
+# In environments/prod/terraform.tfvars
+target_account_ids = ["774133226694", "373160674113", "NEW_ACCOUNT_ID_HERE"]
+```
+
 ```bash
 cd environments/prod
 terraform apply
@@ -93,20 +98,39 @@ export TF_VAR_target_account_ids='["774133226694", "373160674113", "NEW_ACCOUNT_
 terraform apply
 ```
 
-## What Happens Automatically
+---
+
+## 🔄 What Happens Automatically
 
 When the Image Builder pipeline runs:
 
-1. **AMI is built** in the source account (732533289325, ap-southeast-2)
-2. **AMI is shared** with all accounts in `target_account_ids`
-3. **SSM parameter** `/golden-ami/{os_key}/latest` is created in:
-   - The source account
-   - Each target account (same parameter name, account-specific value)
-4. **Lifecycle policy** manages retention in the source account (keeps 3 newest)
+```mermaid
+sequenceDiagram
+    participant SA as Source Account<br/>(732533289325)
+    participant TA1 as Target Account 1<br/>(774133226694)
+    participant TA2 as Target Account 2<br/>(373160674113)
+    
+    SA->>SA: 1️⃣ Build AMI
+    SA->>TA1: 2️⃣ Share AMI (launch permission)
+    SA->>TA2: 2️⃣ Share AMI (launch permission)
+    SA->>SA: 3️⃣ Create SSM param<br/>/golden-ami/{os}/latest
+    SA->>TA1: 3️⃣ Create SSM param<br/>(account-specific AMI ID)
+    SA->>TA2: 3️⃣ Create SSM param<br/>(account-specific AMI ID)
+    SA->>SA: 4️⃣ Lifecycle policy<br/>retains 3 newest
+```
 
-## Verification
+| Step | Action | Details |
+|------|--------|---------|
+| 1️⃣ | **AMI Built** | In source account (ap-southeast-2) |
+| 2️⃣ | **AMI Shared** | With all accounts in `target_account_ids` |
+| 3️⃣ | **SSM Parameters Created** | In source + each target account |
+| 4️⃣ | **Lifecycle Management** | Retains 3 newest in source account |
 
-After a pipeline run, verify in each target account:
+---
+
+## ✅ Verification
+
+### Check SSM Parameter in Target Account
 
 ```bash
 # In target account (e.g., 774133226694)
@@ -115,37 +139,57 @@ aws ssm get-parameter --name "/golden-ami/rhel-9/latest" --region ap-southeast-2
 
 The parameter value will be the AMI ID shared from the source account.
 
+### List Shared AMIs in Target Account
+
 ```bash
-# List shared AMIs in target account
-aws ec2 describe-images --owners 732533289325 --filters "Name=name,Values=jq-golden-ami-*" --region ap-southeast-2
+aws ec2 describe-images \
+  --owners 732533289325 \
+  --filters "Name=name,Values=jq-golden-ami-*" \
+  --region ap-southeast-2
 ```
 
-## Architecture Benefits
+### Check Launch Permissions
+
+```bash
+aws ec2 describe-image-attribute \
+  --image-id ami-xxxxx \
+  --attribute launchPermission \
+  --region ap-southeast-2
+```
+
+---
+
+## 🏗️ Architecture Benefits
 
 | Aspect | Benefit |
 |--------|---------|
-| **Single apply** | One `terraform apply` in prod configures everything |
-| **Native AWS** | Uses Image Builder's built-in cross-account distribution |
-| **Atomic** | Sharing happens during build - no drift |
-| **Automated SSM** | Parameters created in all accounts automatically |
-| **Modular** | Add accounts by updating one variable |
-| **No extra state** | Single Terraform state file |
-| **No extra IAM** | Image Builder execution role handles cross-account permissions |
+| ![Single](https://img.shields.io/badge/Single_Apply-One_Terraform_Apply-brightgreen) | One `terraform apply` configures everything |
+| ![Native](https://img.shields.io/badge/Native_AWS-Image_Builder_Distribution-brightgreen) | Uses Image Builder's built-in cross-account distribution |
+| ![Atomic](https://img.shields.io/badge/Atomic-Sharing_During_Build-brightgreen) | Sharing happens during build - no drift |
+| ![Automated](https://img.shields.io/badge/Automated_SSM-All_Accounts-brightgreen) | Parameters created in all accounts automatically |
+| ![Modular](https://img.shields.io/badge/Modular-One_Variable-brightgreen) | Add accounts by updating one variable |
+| ![State](https://img.shields.io/badge/No_Extra_State-Single_State_File-brightgreen) | Single Terraform state file |
+| ![IAM](https://img.shields.io/badge/No_Extra_IAM-Execution_Role_Handles-brightgreen) | Image Builder execution role handles permissions |
 
-## Required Permissions
+---
+
+## 🔐 Required Permissions
 
 ### Source Account (Automatically Configured)
 
 The Image Builder execution role (created by `foundation` module) needs:
-- `ec2:ModifyImageAttribute` on the AMI (for sharing)
-- `ssm:PutParameter` in target accounts (for SSM parameters)
-- `sts:AssumeRole` on the distribution role in each target account
 
-The `foundation` module **dynamically generates** the cross-account assume role permissions based on `var.target_account_ids`. No code changes needed when adding/removing accounts.
+| Permission | Resource | Purpose |
+|------------|----------|---------|
+| `ec2:ModifyImageAttribute` | AMI | For sharing (launch permissions) |
+| `ssm:PutParameter` | Target account SSM | For parameter replication |
+| `sts:AssumeRole` | Target account distribution role | Cross-account trust |
+
+> ✅ The `foundation` module **dynamically generates** cross-account assume role permissions based on `var.target_account_ids`. No code changes needed when adding/removing accounts.
 
 ### Target Account Prerequisites (Manual - One Time Per Account)
 
-Each target account **must** have the following IAM role for Image Builder to assume during distribution:
+Each target account **must** have this IAM role:
 
 ```hcl
 # In TARGET ACCOUNT (e.g., 774133226694, 373160674113):
@@ -173,58 +217,73 @@ resource "aws_iam_role_policy_attachment" "distribution" {
 }
 ```
 
-**Required AWS Managed Policy:** `EC2ImageBuilderDistributionCrossAccountRolePolicy` (provides `ec2:ModifyImageAttribute`, `ec2:CopyImage`, `ssm:PutParameter` on target account resources).
+**Required AWS Managed Policy:** `EC2ImageBuilderDistributionCrossAccountRolePolicy`
 
-## Encryption Considerations
+Provides: `ec2:ModifyImageAttribute`, `ec2:CopyImage`, `ssm:PutParameter` on target account resources.
+
+---
+
+## 🔐 Encryption Considerations
 
 ### Current Default (Unencrypted) ✅
 
-- Works out of the box for cross-account sharing
-- No KMS configuration required
-- AMIs are unencrypted in all accounts
-- **This is the current production configuration**
+| Feature | Status |
+|---------|--------|
+| Cross-account sharing | Works out of the box |
+| KMS configuration | Not required |
+| AMI encryption | Unencrypted in all accounts |
+| **Production status** | Current configuration |
 
 ### Encrypted AMIs (Customer Managed Keys) - Future Enhancement
 
 When `var.ebs_encrypted = true` is needed:
 
-1. **Source Account**: Requires customer managed KMS key (`var.ebs_kms_key_alias`)
-2. **Key Policy**: Must allow `imagebuilder.amazonaws.com` and target accounts
-3. **Target Accounts**: Image Builder re-encrypts with each target's KMS key
-4. **Target KMS**: Each target needs a KMS key accessible by Image Builder
+```mermaid
+graph LR
+    SA[Source Account<br/>Customer KMS Key] -->|Re-encrypt| TA1[Target Account 1<br/>Customer KMS Key]
+    SA -->|Re-encrypt| TA2[Target Account 2<br/>Customer KMS Key]
+```
 
-```hcl
-# Source account key policy must include:
+#### Requirements:
+
+1. **Source Account:** Customer managed KMS key (`var.ebs_kms_key_alias`)
+2. **Key Policy:** Must allow `imagebuilder.amazonaws.com` and target accounts
+3. **Target Accounts:** Image Builder re-encrypts with each target's KMS key
+4. **Target KMS:** Each target needs a KMS key accessible by Image Builder
+
+#### Source Key Policy Example:
+
+```json
 {
   "Sid": "AllowImageBuilder",
   "Effect": "Allow",
   "Principal": { "Service": "imagebuilder.amazonaws.com" },
   "Action": [
-    "kms:Encrypt",
-    "kms:Decrypt",
-    "kms:ReEncrypt*",
-    "kms:GenerateDataKey*",
-    "kms:DescribeKey"
-  ],
-  "Resource": "*"
-}
-
-# Plus cross-account access for each target:
-{
-  "Sid": "AllowTargetAccounts",
-  "Effect": "Allow",
-  "Principal": { "AWS": ["arn:aws:iam::TARGET_ACCOUNT_1:root", ...] },
-  "Action": [
-    "kms:Decrypt",
-    "kms:DescribeKey",
-    "kms:ReEncrypt*",
-    "kms:GenerateDataKey*"
+    "kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*",
+    "kms:GenerateDataKey*", "kms:DescribeKey"
   ],
   "Resource": "*"
 }
 ```
 
-## Limits & Quotas
+```json
+{
+  "Sid": "AllowTargetAccounts",
+  "Effect": "Allow",
+  "Principal": { 
+    "AWS": ["arn:aws:iam::TARGET_ACCOUNT_1:root", "arn:aws:iam::TARGET_ACCOUNT_2:root"]
+  },
+  "Action": [
+    "kms:Decrypt", "kms:DescribeKey",
+    "kms:ReEncrypt*", "kms:GenerateDataKey*"
+  ],
+  "Resource": "*"
+}
+```
+
+---
+
+## 📊 Limits & Quotas
 
 | Limit | Default | Notes |
 |-------|---------|-------|
@@ -232,38 +291,82 @@ When `var.ebs_encrypted = true` is needed:
 | AMI copy per region | 50 concurrent | Per account limit |
 | KMS key policy size | 32 KB | May need multiple statements for many accounts |
 
-## Troubleshooting
+---
+
+## 🐛 Troubleshooting
 
 ### AMI Not Shared
 
 ```bash
 # Check launch permissions in target account
-aws ec2 describe-image-attribute --image-id ami-xxxxx --attribute launchPermission --region ap-southeast-2
+aws ec2 describe-image-attribute \
+  --image-id ami-xxxxx \
+  --attribute launchPermission \
+  --region ap-southeast-2
 ```
 
 ### SSM Parameter Missing in Target
 
 ```bash
 # Verify execution role has ssm:PutParameter in target
-aws iam simulate-principal-policy --policy-source-arn <execution-role-arn> --action-names ssm:PutParameter --resource-arns "arn:aws:ssm:ap-southeast-2:TARGET_ACCOUNT:parameter/golden-ami/*"
+aws iam simulate-principal-policy \
+  --policy-source-arn <execution-role-arn> \
+  --action-names ssm:PutParameter \
+  --resource-arns "arn:aws:ssm:ap-southeast-2:TARGET_ACCOUNT:parameter/golden-ami/*"
 ```
 
 ### KMS Access Denied (When Encryption Enabled)
 
-- Verify source KMS key policy allows target accounts
-- Verify target KMS key allows `imagebuilder.amazonaws.com`
-- Check CloudTrail for `KMS.Decrypt` events
+- ✅ Verify source KMS key policy allows target accounts
+- ✅ Verify target KMS key allows `imagebuilder.amazonaws.com`
+- ✅ Check CloudTrail for `KMS.Decrypt` events
 
 ### Target Account Role Missing
 
-Ensure each target account has the `EC2ImageBuilderDistributionCrossAccountRole` with the correct trust policy pointing to source account (732533289325) and ExternalId `imagebuilder-distribution`.
-
-## Future Enhancement: accounts.yaml (Planned)
-
-For dynamic, GitOps-friendly account management at scale (10+ accounts), see `SOLUTION.md` for the planned `accounts.yaml` approach that will replace static `target_account_ids` with a declarative account registry supporting per-account region mapping, retention, and compliance settings.
+Ensure each target account has:
+- Role name: `EC2ImageBuilderDistributionCrossAccountRole`
+- Trust policy pointing to source account (`732533289325`)
+- ExternalId: `imagebuilder-distribution`
+- Attached policy: `EC2ImageBuilderDistributionCrossAccountRolePolicy`
 
 ---
 
-*Document Version: 2.1*  
-*Author: Platform Engineering*  
-*Last Updated: 2025-11-09*
+## 🚀 Future Enhancement: `accounts.yaml` (Planned)
+
+For dynamic, GitOps-friendly account management at scale (10+ accounts):
+
+```yaml
+# accounts.yaml (planned)
+accounts:
+  - account_id: "999999999999"
+    account_name: "new-workload"
+    account_alias: "new-wl"
+    regions:
+      - ap-southeast-2
+    ami_distribution:
+      enabled: true
+      retention_count: 3
+      stig_level: "high"
+```
+
+This will replace static `target_account_ids` with a declarative account registry supporting per-account region mapping, retention, and compliance settings.
+
+---
+
+## 📚 Related Documentation
+
+| Document | Description |
+|----------|-------------|
+| 📄 [SOLUTION.md](SOLUTION.md) | Enterprise solution design |
+| 📄 [CLAUDE.md](CLAUDE.md) | Project instructions |
+| 📄 [CONFIGURABLE_VALUES.md](CONFIGURABLE_VALUES.md) | All tfvars reference |
+
+---
+
+<div align="center">
+
+**📄 Document Version: 2.1**  
+**👤 Author: Platform Engineering**  
+**📅 Last Updated: 2025-11-09**
+
+</div>

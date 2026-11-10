@@ -1,91 +1,96 @@
-# AWS Golden AMI Factory
+# 🏗️ AWS Golden AMI Factory
 
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-7B42BC.svg)](https://www.terraform.io/)
 [![AWS Provider](https://img.shields.io/badge/AWS%20Provider-%3E%3D5.0-FF9900.svg)](https://registry.terraform.io/providers/hashicorp/aws/latest)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Enterprise-grade Terraform solution for building hardened, compliant Golden AMIs using **EC2 Image Builder** with native cross-account distribution capabilities. Supports **RHEL 8/9/10** and **Windows Server 2022/2025** with STIG compliance, CloudWatch Agent, SSM Agent, and automated cross-account AMI sharing.
+> **Enterprise-grade Terraform solution** for building hardened, compliant Golden AMIs using **AWS EC2 Image Builder** with native cross-account distribution capabilities.
+
+### 🎯 Supported Platforms
+
+| OS Family | Versions | Compliance |
+|-----------|----------|------------|
+| 🐧 **Linux** | RHEL 8, RHEL 9, RHEL 10 | STIG + CIS Level 2 |
+| 🪟 **Windows** | Server 2022, Server 2025 | STIG + CIS Level 2 |
+
+### ✨ Key Features
+
+- ✅ **Native Cross-Account Sharing** - No separate Terraform state
+- ✅ **Declarative Recipes** - YAML-based with GitOps workflow
+- ✅ **Automated SSM Replication** - Parameters in source + all targets
+- ✅ **Lifecycle Management** - Configurable AMI retention
+- ✅ **Immutable Components** - Content-hashed versioning
+- ✅ **Single Source of Truth** - All config in `terraform.tfvars`
 
 ---
 
-## Table of Contents
+## 📖 Table of Contents
 
-- [Architecture Overview](#architecture-overview)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Detailed Deployment Guide](#detailed-deployment-guide)
-- [Adding New Target Accounts](#adding-new-target-accounts)
-- [Adding New Recipes](#adding-new-recipes)
-- [Configuration Reference](#configuration-reference)
-- [Verification & Testing](#verification--testing)
-- [Troubleshooting](#troubleshooting)
-- [Security Considerations](#security-considerations)
-- [Cleanup](#cleanup)
+- [Architecture Overview](#-architecture-overview)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Detailed Deployment Guide](#-detailed-deployment-guide)
+- [Adding New Target Accounts](#-adding-new-target-accounts)
+- [Adding New Recipes](#-adding-new-recipes)
+- [Configuration Reference](#-configuration-reference)
+- [Verification & Testing](#-verification--testing)
+- [Troubleshooting](#-troubleshooting)
+- [Security Considerations](#-security-considerations)
+- [Cleanup](#-cleanup)
+- [Documentation](#-documentation)
 
 ---
 
-## Architecture Overview
+## 🏛️ Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    MANAGEMENT ACCOUNT (373160674113)            │
-│  ┌─────────────┐                                               │
-│  │ IAM User    │  AssumeRole → TerraformDeploymentRole        │
-│  │ "Terraform" │                                               │
-│  └─────────────┘                                               │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   DEVELOPMENT ACCOUNT (732533289325)            │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │              TerraformDeploymentRole                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                              │                                  │
-│          ┌───────────────────┼───────────────────┐             │
-│          ▼                   ▼                   ▼             │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐      │
-│  │  Foundation  │   │  Components  │   │ Golden Image │      │
-│  │   Module     │   │   Module     │   │   Module     │      │
-│  │  (IAM, SG,   │   │  (Custom     │   │  (Pipelines  │      │
-│  │   SNS)       │   │   Components)│   │   per OS)    │      │
-│  └──────────────┘   └──────────────┘   └──────┬───────┘      │
-│                                                │              │
-│                                                ▼              │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │              Image Builder Pipelines                    │  │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │  │
-│  │  │ RHEL 8  │ │ RHEL 9  │ │ RHEL 10 │ │Win 2022 │       │  │
-│  │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │  │
-│  └───────┼───────────┼───────────┼───────────┼────────────┘  │
-└──────────┼───────────┼───────────┼───────────┼────────────────┘
-           │           │           │           │
-           ▼           ▼           ▼           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      TARGET ACCOUNTS                            │
-│  ┌──────────────────┐  ┌──────────────────┐                    │
-│  │ 774133226694     │  │ 373160674113     │  ... (+10 more)   │
-│  │ (Production)     │  │ (Management)     │                    │
-│  │                  │  │                  │                    │
-│  │ • Shared AMIs    │  │ • Shared AMIs    │                    │
-│  │ • SSM Params     │  │ • SSM Params     │                    │
-│  │ • KMS Key        │  │ • KMS Key        │                    │
-│  └──────────────────┘  └──────────────────┘                    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph MA[🟣 MANAGEMENT ACCOUNT<br/>373160674113]
+        IAM[👤 IAM User "Terraform"]
+    end
+    
+    IAM -.->|AssumeRole| DA
+    
+    subgraph DA[🟠 DEVELOPMENT ACCOUNT<br/>732533289325<br/>BUILD ACCOUNT]
+        TFRole[🛡️ TerraformDeploymentRole]
+        Foundation[📦 Foundation Module<br/>IAM, SG, SNS]
+        Components[🔧 Components Module<br/>6 Custom Components]
+        GoldenImage[🏗️ Golden Image Module<br/>5 Pipelines]
+        
+        TFRole --> Foundation
+        TFRole --> Components
+        TFRole --> GoldenImage
+    end
+    
+    GoldenImage -->|Cross-Account Distribution| TA1[🔵 TARGET 1: Production<br/>774133226694]
+    GoldenImage -->|Cross-Account Distribution| TA2[🟣 TARGET 2: Management<br/>373160674113]
+    GoldenImage -.->|Extensible| TA3[⚪ TARGET N: Future Accounts]
+    
+    subgraph TA1
+        AMI1[📦 Shared AMIs]
+        SSM1[📋 SSM Parameters]
+        KMS1[🔐 KMS Keys]
+    end
+    
+    subgraph TA2
+        AMI2[📦 Shared AMIs]
+        SSM2[📋 SSM Parameters]
+        KMS2[🔐 KMS Keys]
+    end
 ```
 
-### Key Components
+### 📦 Key Modules
 
 | Module | Purpose | Resources Created |
 |--------|---------|-------------------|
 | **Foundation** | IAM roles, security groups, SNS | Build role, instance profile, SG, lifecycle role, Image Builder execution role |
-| **Components** | Custom Image Builder components | 6 components (3 Linux + 3 Windows) |
+| **Components** | Custom Image Builder components | 6 components (3 Linux + 3 Windows) with content-hashed names |
 | **Recipe Registry** | Declarative recipe definitions | Reads YAML recipes, outputs normalized configs |
-| **Golden Image** | Image Builder pipelines | Recipe, infrastructure config, distribution config, pipeline, lifecycle policy per OS |
+| **Golden Image** | Image Builder pipelines | Recipe, infra config, distribution config, pipeline, lifecycle policy per OS |
 
 ---
 
-## Prerequisites
+## ✅ Prerequisites
 
 ### Required Tools
 - **Terraform** >= 1.5.0
@@ -136,7 +141,7 @@ resource "aws_iam_role_policy_attachment" "distribution" {
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 # 1. Clone repository
@@ -167,7 +172,7 @@ terraform apply
 
 ---
 
-## Detailed Deployment Guide
+## 📋 Detailed Deployment Guide
 
 ### Step 1: Backend Configuration
 
@@ -266,22 +271,18 @@ terraform apply
 
 ---
 
-## Adding New Target Accounts
+## ➕ Adding New Target Accounts
 
 ### Method 1: Permanent Addition (Recommended)
 
-**File to edit:** `environments/prod/variables.tf`
+**File to edit:** `environments/prod/terraform.tfvars`
 
 ```hcl
-variable "target_account_ids" {
-  description = "Distribution accounts to share AMIs with..."
-  type        = list(string)
-  default     = [
-    "774133226694",  # Production
-    "373160674113",  # Management
-    "NEW_ACCOUNT_ID_HERE"  # <-- ADD HERE
-  ]
-}
+target_account_ids = [
+  "774133226694",  # Production
+  "373160674113",  # Management
+  "NEW_ACCOUNT_ID_HERE"  # <-- ADD HERE
+]
 ```
 
 **Then deploy:**
@@ -327,7 +328,7 @@ aws ec2 describe-images --owners 732533289325 --filters "Name=name,Values=jq-gol
 
 ---
 
-## Adding New Recipes
+## 📋 Adding New Recipes
 
 Recipes are defined declaratively in **YAML files** under `modules/recipe_registry/recipes/`. No Terraform code changes required.
 
@@ -415,7 +416,7 @@ recipes:
 
 ### Step 3: Enable in Terraform (Optional)
 
-**File to edit:** `environments/prod/terraform.tfvars` or `variables.tf`
+**File to edit:** `environments/prod/terraform.tfvars`
 
 ```hcl
 # Enable specific recipes (empty = all from index.yaml)
@@ -484,7 +485,7 @@ terraform apply
 
 ---
 
-## Configuration Reference
+## ⚙️ Configuration Reference
 
 ### Environment Variables (`environments/prod/variables.tf`)
 
@@ -529,7 +530,7 @@ terraform apply
 
 ---
 
-## Verification & Testing
+## ✅ Verification & Testing
 
 ### Check Pipeline Status
 
@@ -585,7 +586,7 @@ aws s3 ls s3://jcp-infra-nonprod/imagebuilder-logs/jq-golden-ami-rhel-9/
 
 ---
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
@@ -629,7 +630,7 @@ aws ec2 describe-security-group-rules --group-id sg-xxxxxxxx --region us-east-1
 
 ---
 
-## Security Considerations
+## 🔐 Security Considerations
 
 ### Default Configuration (Unencrypted)
 - ✅ Simple cross-account sharing
@@ -663,7 +664,7 @@ ebs_kms_key_alias = "alias/golden-ami-source-ebs"  # Customer managed key
 
 ---
 
-## Cleanup
+## 🧹 Cleanup
 
 ### Destroy All Resources
 
@@ -694,15 +695,18 @@ aws ec2 delete-snapshot --snapshot-id snap-xxxxx --region us-east-1
 
 ---
 
-## File Structure Summary
+## 📁 File Structure Summary
 
 ```
 b-aws-tf-gha-aws-golden-ami-factory/
 ├── README.md                              # THIS FILE
 ├── CLAUDE.md                              # Project instructions for AI assistants
 └── golden-ami-factory/
-    ├── SOLUTION.md                        # Enterprise architecture design
-    ├── CROSS_ACCOUNT_SHARING.md           # Cross-account sharing guide
+    ├── docs/
+    │   ├── SOLUTION.md                    # Enterprise architecture design
+    │   ├── CROSS_ACCOUNT_SHARING.md       # Cross-account sharing guide
+    │   ├── CLAUDE.md                      # Project instructions (detailed)
+    │   └── CONFIGURABLE_VALUES.md         # All tfvars reference
     ├── modules/
     │   ├── foundation/                    # IAM, SG, SNS
     │   ├── components/                    # Custom components (6)
@@ -730,13 +734,14 @@ b-aws-tf-gha-aws-golden-ami-factory/
 
 ---
 
-## Support & Documentation
+## 📚 Documentation
 
-- **Architecture Design**: [`golden-ami-factory/SOLUTION.md`](golden-ami-factory/SOLUTION.md)
-- **Cross-Account Guide**: [`golden-ami-factory/CROSS_ACCOUNT_SHARING.md`](golden-ami-factory/CROSS_ACCOUNT_SHARING.md)
-<!-- This is a single-line comment 
--  **Project Instructions**: [`CLAUDE.md`](CLAUDE.md)
--->
+| Document | Description |
+|----------|-------------|
+| 📄 [SOLUTION.md](golden-ami-factory/docs/SOLUTION.md) | Enterprise solution design |
+| 📄 [CROSS_ACCOUNT_SHARING.md](golden-ami-factory/docs/CROSS_ACCOUNT_SHARING.md) | Cross-account sharing guide |
+| 📄 [CLAUDE.md](golden-ami-factory/docs/CLAUDE.md) | Detailed project instructions |
+| 📄 [CONFIGURABLE_VALUES.md](golden-ami-factory/docs/CONFIGURABLE_VALUES.md) | All tfvars reference |
 
 ### AWS Documentation References
 - [EC2 Image Builder User Guide](https://docs.aws.amazon.com/imagebuilder/latest/userguide/)
@@ -746,14 +751,19 @@ b-aws-tf-gha-aws-golden-ami-factory/
 
 ---
 
-## Version History
+## 📜 Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1 | 2025-11-09 | Updated all docs with attractive formatting, AWS icons, mermaid diagrams |
 | 2.0 | 2025-11-09 | Added recipe registry, GitOps onboarding, enterprise docs |
 | 1.0 | 2025-11-06 | Initial release with 5 OS pipelines |
 
 ---
 
-*Maintained by Platform Engineering*  
-*For internal use only*
+<div align="center">
+
+**Maintained by Platform Engineering**  
+**For internal use only**
+
+</div>
