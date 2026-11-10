@@ -2,8 +2,12 @@ data "aws_region" "current" {}
 
 locals {
   base_name         = "${var.name_prefix}-${var.os_key}"
-  ami_name          = "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}.${var.ami_release_version}-{{ imagebuilder:buildDate }}"
-  ami_name_tag      = "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}.${var.ami_release_version}"
+
+  # AMI name with optional release version. If ami_release_version is empty,
+  # the build date provides uniqueness (e.g., -2611-20261110T005304Z).
+  # If set (e.g., "1", "2"), it creates a version suffix (e.g., -2611.1-20261110T005304Z).
+  ami_name          = var.ami_release_version != "" ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}.${var.ami_release_version}-{{ imagebuilder:buildDate }}" : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}-{{ imagebuilder:buildDate }}"
+  ami_name_tag      = var.ami_release_version != "" ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}.${var.ami_release_version}" : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}"
   imagebuilder_tags = { for key, value in var.tags : key => value if lower(key) != "createdby" }
 
   # Recipes are immutable, so the name carries a hash of everything that defines
