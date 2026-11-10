@@ -1,6 +1,6 @@
 # 🏗️ AWS Golden AMI Factory - Project Instructions
 
-> **Version:** 2.1 | **Last Updated:** 2025-11-09 | **Author:** Platform Engineering
+> **Version:** 2.2 | **Last Updated:** 2025-11-10 | **Author:** Platform Engineering
 
 ---
 
@@ -192,7 +192,7 @@ ami_name_prefix = "jq-golden-ami"
 ami_architecture = "x86_64"
 ami_date_format = "YYMM"
 ami_date_token = null
-ami_release_version = "1"
+ami_release_version = ""   # Empty = use build timestamp for uniqueness; set to "1", "2" for versioning
 ssm_parameter_prefix = "/golden-ami"
 ```
 
@@ -284,9 +284,22 @@ component_version = "1.0.0"
 > **No separate `ami_sharing` environment needed.** Sharing is configured in `modules/golden_image/main.tf` distribution configuration.
 
 ```hcl
+locals {
+  # Resolved values for tags (never null/empty to avoid AWS tag validation errors)
+  ami_date_token     = var.ami_date_token != null ? var.ami_date_token : formatdate(var.ami_date_format, plantimestamp())
+  ami_release_version = var.ami_release_version != "" ? var.ami_release_version : "latest"
+}
+
 distribution {
   ami_distribution_configuration {
     target_account_ids = var.target_account_ids  # Native Image Builder sharing
+    ami_tags = merge(var.tags, {
+      Name        = local.ami_name_tag
+      OS          = var.os_key
+      DateToken   = local.ami_date_token
+      Release     = local.ami_release_version
+      GoldenImage = var.os_key
+    })
   }
   
   # SSM parameter in build account
@@ -452,6 +465,7 @@ aws imagebuilder get-image --image-build-version-arn <arn> --query 'image.state'
 | **KMS Errors** | Ensure customer-managed key allows `imagebuilder.amazonaws.com`; target accounts need KMS access |
 | **AWS CLI Profile Issues** | Ensure `development` profile uses `source_profile = default` (not `management`) |
 | **SG Egress Drift** | Fixed by using `aws_security_group_rule` instead of `aws_vpc_security_group_egress_rule` |
+| **Distribution Tag Null Error** | Fixed: tags resolve to "latest" or current date instead of null |
 
 ---
 
@@ -486,8 +500,8 @@ terraform destroy
 
 <div align="center">
 
-**📄 Document Version: 2.1**  
+**📄 Document Version: 2.2**  
 **👤 Author: Platform Engineering**  
-**📅 Last Updated: 2025-11-09**
+**📅 Last Updated: 2025-11-10**
 
 </div>

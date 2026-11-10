@@ -1,6 +1,6 @@
 # 📋 Configurable Values Reference - terraform.tfvars
 
-> **Version:** 2.1 | **Last Updated:** 2025-11-09 | **Author:** Platform Engineering
+> **Version:** 2.2 | **Last Updated:** 2025-11-10 | **Author:** Platform Engineering
 
 ---
 
@@ -21,6 +21,8 @@ The entire configuration has been refactored so that **`terraform.tfvars` is the
 | 📄 `modules/recipe_registry/variables.tf` | Added `default_root_volume_size`, `default_lifecycle_policy_count` |
 | 📄 `modules/recipe_registry/main.tf` | Updated to use new defaults in template interpolation |
 | 📄 `modules/recipe_registry/recipes/*.yaml` (5) | Updated to use `${default_stig_level}`, `${default_root_volume_size}`, `${default_lifecycle_policy_count}` |
+| 📄 `modules/golden_image/main.tf` | Added local resolved values for tags (prevents null tag errors) |
+| 📄 `modules/golden_image/variables.tf` | Added `ami_date_format`, updated `ami_date_token` & `ami_release_version` |
 
 ---
 
@@ -124,6 +126,10 @@ common_tags = {
 {ami_name_prefix}-{os_code}-{ami_architecture}-{ami_date_token}-{buildDate}
 ```
 **Example:** `jq-golden-ami-rhel9-x86_64-2501-20250115T005304Z`
+
+**AMI Tags (never null - resolved locally):**
+- `DateToken` = resolved date token (e.g., "2611")
+- `Release` = version or "latest" (e.g., "1" or "latest")
 
 > **Note:** The build timestamp (`{buildDate}`) is automatically appended by Image Builder and provides uniqueness for each build. Use `ami_release_version` when you want semantic versioning (e.g., bump to "2" for a major change).
 
@@ -278,6 +284,13 @@ linux_instance_types   = ["m6i.large", "m5.large"]
 windows_instance_types = ["m6i.large", "m5.large"]
 ```
 
+### Enable Semantic Versioning
+```hcl
+# In terraform.tfvars
+ami_release_version = "1"  # First release
+# ami_release_version = "2"  # Second release (major update)
+```
+
 ---
 
 ## 🏗️ Architecture Notes
@@ -332,6 +345,28 @@ If upgrading from a previous version:
 
 ---
 
+## 🐛 Fixed Issues
+
+### Distribution Tag Null Error (v2.2)
+
+**Error:** `Tag value cannot be null. Use empty string instead.`
+
+**Root Cause:** `ami_date_token` defaulted to `null`, `ami_release_version` defaulted to `""` - passed directly to AMI tags during distribution.
+
+**Fix Applied in `modules/golden_image/main.tf`:**
+```hcl
+locals {
+  ami_date_token     = var.ami_date_token != null ? var.ami_date_token : formatdate(var.ami_date_format, plantimestamp())
+  ami_release_version = var.ami_release_version != "" ? var.ami_release_version : "latest"
+}
+```
+
+**Result:** Tags now always have valid values:
+- `DateToken = "2611"` (never null)
+- `Release = "latest"` or `"1"`, `"2"`, etc. (never null)
+
+---
+
 ## 📚 Related Documentation
 
 | Document | Description |
@@ -344,8 +379,8 @@ If upgrading from a previous version:
 
 <div align="center">
 
-**📄 Document Version: 2.1**  
+**📄 Document Version: 2.2**  
 **👤 Author: Platform Engineering**  
-**📅 Last Updated: 2025-11-09**
+**📅 Last Updated: 2025-11-10**
 
 </div>

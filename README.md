@@ -625,6 +625,7 @@ aws s3 ls s3://jcp-infra-nonprod/imagebuilder-logs/jq-golden-ami-rhel-9/
 | **KMS errors** | AWS managed key used for encryption | Use customer managed key; add cross-account permissions |
 | **SSM parameter missing** | Execution role lacks permissions | Check `ssm:PutParameter` in execution role policy |
 | **Profile issues** | Wrong AWS CLI profile | Use `development` profile with `source_profile = default` |
+| **Distribution tag error** | Null tag values passed to AMI | Fixed: tags now resolve to "latest" or current date |
 
 ### Debug Commands
 
@@ -783,6 +784,7 @@ b-aws-tf-gha-aws-golden-ami-factory/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2 | 2025-11-10 | Fixed distribution tag null error; AMI versioning defaults to build timestamp |
 | 2.1 | 2025-11-09 | Updated all docs with attractive formatting, AWS icons, mermaid diagrams |
 | 2.0 | 2025-11-09 | Added recipe registry, GitOps onboarding, enterprise docs |
 | 1.0 | 2025-11-06 | Initial release with 5 OS pipelines |
