@@ -1,9 +1,5 @@
 data "aws_partition" "current" {}
 
-locals {
-  logs_bucket_arn = "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}"
-}
-
 # ---------------------------------------------------------------------------
 # Build instance role + profile
 # ---------------------------------------------------------------------------
@@ -39,20 +35,6 @@ resource "aws_iam_role_policy_attachment" "image_builder_ecr_container_builds" {
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
 }
 
-data "aws_iam_policy_document" "build_logs" {
-  statement {
-    sid       = "WriteBuildLogs"
-    actions   = ["s3:PutObject"]
-    resources = ["${local.logs_bucket_arn}/${var.log_bucket_prefix}/*"]
-  }
-}
-
-resource "aws_iam_role_policy" "build_logs" {
-  name   = "write-build-logs"
-  role   = aws_iam_role.build.id
-  policy = data.aws_iam_policy_document.build_logs.json
-}
-
 resource "aws_iam_instance_profile" "build" {
   name = "${var.name_prefix}-build-profile"
   role = aws_iam_role.build.name
@@ -67,39 +49,30 @@ resource "aws_security_group" "build" {
   description = "Image Builder build instances: no ingress, web egress only"
   vpc_id      = var.vpc_id
   tags        = merge(var.tags, { Name = "${var.name_prefix}-build-sg" })
+
+  # Egress rules are managed via aws_security_group_rule resources below.
+  # We do NOT set egress = [] here because it conflicts with aws_vpc_security_group_egress_rule
+  # resources causing perpetual drift (AWS returns the rules as part of SG egress config).
 }
 
-resource "aws_vpc_security_group_egress_rule" "https" {
+resource "aws_security_group_rule" "https_egress" {
+  type              = "egress"
   security_group_id = aws_security_group.build.id
-  description       = "HTTPS to SSM, S3, package repositories"
-  ip_protocol       = "tcp"
+  description       = "HTTPS to SSM, package repositories"
+  protocol          = "tcp"
   from_port         = 443
   to_port           = 443
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
-resource "aws_vpc_security_group_egress_rule" "http" {
+resource "aws_security_group_rule" "http_egress" {
+  type              = "egress"
   security_group_id = aws_security_group.build.id
   description       = "HTTP for OS update mirrors"
-  ip_protocol       = "tcp"
+  protocol          = "tcp"
   from_port         = 80
   to_port           = 80
-  cidr_ipv4         = "0.0.0.0/0"
-}
-
-# ---------------------------------------------------------------------------
-# Build notifications
-# ---------------------------------------------------------------------------
-resource "aws_sns_topic" "builds" {
-  name = "${var.name_prefix}-build-events"
-  tags = var.tags
-}
-
-resource "aws_sns_topic_subscription" "email" {
-  for_each  = toset(var.notification_emails)
-  topic_arn = aws_sns_topic.builds.arn
-  protocol  = "email"
-  endpoint  = each.value
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
 # ---------------------------------------------------------------------------
@@ -140,6 +113,7 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
       "ssm:DeleteParameter",
       "ssm:GetParameter",
       "ssm:GetParameters",
+      "ssm:SendCommand",
       "ssm:DescribeParameters"
     ]
     resources = [
@@ -158,6 +132,8 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
     actions = [
       "ec2:CreateImage",
       "ec2:CopyImage",
+      "ec2:ModifyImageAttribute",
+      "ec2:ModifySnapshotAttribute",
       "ec2:DeregisterImage",
       "ec2:DescribeImages",
       "ec2:DescribeSnapshots",
@@ -181,6 +157,14 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
     ]
     resources = ["*"]
   }
+  dynamic "statement" {
+    for_each = length(var.target_account_ids) > 0 ? [1] : []
+    content {
+      sid     = "AllowAssumeDistributionCrossAccountRole"
+      actions = ["sts:AssumeRole"]
+      resources = [for account_id in var.target_account_ids : "arn:${data.aws_partition.current.partition}:iam::${account_id}:role/EC2ImageBuilderDistributionCrossAccountRole"]
+    }
+  }
   statement {
     sid = "KMSForEncryptedAMIs"
     actions = [
@@ -200,32 +184,14 @@ data "aws_iam_policy_document" "imagebuilder_execution" {
     }
   }
   statement {
-    sid = "S3LogsAccess"
-    actions = [
-      "s3:PutObject",
-      "s3:GetObject",
-      "s3:ListBucket",
-      "s3:GetBucketLocation"
-    ]
-    resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}",
-      "arn:${data.aws_partition.current.partition}:s3:::${var.log_bucket_name}/*"
-    ]
-  }
-  statement {
-    sid       = "SNSPublish"
-    actions   = ["sns:Publish"]
-    resources = ["arn:${data.aws_partition.current.partition}:sns:*:${data.aws_caller_identity.current.account_id}:*"]
-  }
-  statement {
-    sid    = "IAMPassRole"
+    sid     = "IAMPassRole"
     actions = ["iam:PassRole"]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.name_prefix}-build-role"
     ]
   }
   statement {
-    sid    = "IAMGetRole"
+    sid     = "IAMGetRole"
     actions = ["iam:GetRole", "iam:GetInstanceProfile"]
     resources = [
       "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/${var.name_prefix}-build-role",
@@ -241,6 +207,14 @@ resource "aws_iam_role" "imagebuilder_execution" {
   description        = "Execution role for EC2 Image Builder image distribution and integration"
   assume_role_policy = data.aws_iam_policy_document.imagebuilder_trust.json
   tags               = var.tags
+}
+
+# Attach AWS managed policy for correct SSM SendCommand permissions
+# This grants the properly-scoped ssm:SendCommand, ssm:GetCommandInvocation,
+# ssm:ListCommandInvocations and other orchestration permissions Image Builder needs.
+resource "aws_iam_role_policy_attachment" "imagebuilder_execution_managed" {
+  role       = aws_iam_role.imagebuilder_execution.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/EC2ImageBuilderExecutionPolicy"
 }
 
 resource "aws_iam_role_policy" "imagebuilder_execution" {

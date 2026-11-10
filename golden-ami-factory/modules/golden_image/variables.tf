@@ -62,12 +62,12 @@ variable "stig_component_arn" {
 }
 
 variable "stig_level" {
-  description = "STIG severity passed to the Amazon-managed component's Level parameter."
+  description = "STIG severity passed to the Amazon-managed component's Level parameter (low, medium, high)."
   type        = string
 
   validation {
     condition     = contains(["low", "medium", "high"], var.stig_level)
-    error_message = "stig_level must be low, medium or high."
+    error_message = "stig_level must be low, medium, or high."
   }
 }
 
@@ -80,9 +80,16 @@ variable "root_volume_size" {
   type = number
 }
 
+variable "ebs_encrypted" {
+  description = "Whether to encrypt the EBS volumes and output AMI snapshots. Set to false for no encryption."
+  type        = bool
+  default     = false
+}
+
 variable "kms_key_arn" {
-  description = "EBS KMS key ARN used for build volumes and the output AMI snapshots."
+  description = "EBS KMS key ARN used for build volumes and the output AMI snapshots. Required only when ebs_encrypted = true."
   type        = string
+  default     = ""
 }
 
 variable "instance_types" {
@@ -104,21 +111,6 @@ variable "security_group_id" {
 
 variable "instance_profile_name" {
   type = string
-}
-
-variable "sns_topic_arn" {
-  type    = string
-  default = null
-}
-
-variable "log_bucket_name" {
-  description = "Name of the existing S3 bucket where Image Builder writes logs."
-  type        = string
-}
-
-variable "log_bucket_prefix" {
-  description = "Base S3 key prefix for Image Builder logs."
-  type        = string
 }
 
 variable "ssm_parameter_name" {

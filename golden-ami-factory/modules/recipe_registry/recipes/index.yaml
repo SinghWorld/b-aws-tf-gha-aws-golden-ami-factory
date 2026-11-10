@@ -1,0 +1,16 @@
+# Recipe Registry Index
+# List all available recipes here. Each entry should match a .yaml file in this directory.
+# To enable/disable recipes, modify the 'enabled_recipes' variable or edit this list.
+
+recipes:
+  - rhel-8
+  - rhel-9
+  - rhel-10
+  - windows-2022
+  - windows-2025
+
+# Example additional recipes (uncomment to enable):
+#   - rhel-9-cis-level-1
+#   - ubuntu-2204-cis
+#   - amazon-linux-2023-cis
+#   - windows-2025-pci-dss

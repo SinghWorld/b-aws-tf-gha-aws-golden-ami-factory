@@ -1,0 +1,72 @@
+# RHEL 8 Golden Image Recipe
+# Golden AMI recipe for Red Hat Enterprise Linux 8 with CIS Level 2 compliance
+
+name: "RHEL 8 Golden Image"
+description: "Hardened RHEL 8 image with STIG baseline + CIS Level 2 hardening, SSM Agent, CloudWatch Agent, and validation tests"
+
+os_family: "linux"
+
+# Parent image: AWS-managed RHEL 8 base image (uses deployment region)
+parent_image_arn: "${aws_managed_prefix}:image/red-hat-enterprise-linux-8-x86/x.x.x"
+
+# STIG component ARN (AWS-managed, available in deployment region)
+# Using STIG as baseline, then adding CIS Level 2 via custom hardening
+stig_component_arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
+
+# STIG level: low, medium, or high (using high as baseline for CIS compliance)
+# Can be overridden by default_stig_level from terraform.tfvars
+stig_level: "${default_stig_level}"
+
+# Root volume configuration
+root_volume_size: ${default_root_volume_size}
+root_device_name: "/dev/xvda"
+ebs_encrypted: false
+kms_key_arn: ""
+
+# Component chain - order matters!
+# CIS Level 2 achieved via: STIG High baseline + Custom CIS Level 2 hardening
+component_chain:
+  # 1. OS patches (deployment region)
+  - arn: "${aws_managed_prefix}:component/update-linux/x.x.x"
+    phase: "build"
+
+  # 2. AWS CLI v2 (deployment region)
+  - arn: "${aws_managed_prefix}:component/aws-cli-version-2-linux/x.x.x"
+    phase: "build"
+
+  # 3. SSM Agent (custom component)
+  - arn: "${custom_components_arns["linux-ssm-agent"]}"
+    phase: "build"
+
+  # 4. STIG High hardening baseline (AWS-managed, deployment region)
+  - arn: "${aws_managed_prefix}:component/stig-build-linux/x.x.x"
+    phase: "build"
+    parameters:
+      Level: "High"
+
+  # 5. CIS Level 2 hardening (custom component - implements CIS benchmarks on top of STIG)
+  - arn: "${custom_components_arns["linux-hardening"]}"
+    phase: "build"
+
+  # 6. Validation tests (custom component - validates CIS Level 2 compliance)
+  - arn: "${custom_components_arns["linux-validate"]}"
+    phase: "test"
+
+  # 7. CloudWatch Agent (deployment region)
+  - arn: "${aws_managed_prefix}:component/amazon-cloudwatch-agent-linux/x.x.x"
+    phase: "build"
+
+  # 8. Boot verification (deployment region)
+  - arn: "${aws_managed_prefix}:component/simple-boot-test-linux/x.x.x"
+    phase: "test"
+
+block_device_mappings: []
+ami_name_suffix: ""
+distribution_regions: []
+lifecycle_policy_count: ${default_lifecycle_policy_count}
+
+tags:
+  Compliance: "CIS-Level-2"
+  Baseline: "STIG-High"
+  OSFamily: "Linux"
+  BaseOS: "RHEL-8"
