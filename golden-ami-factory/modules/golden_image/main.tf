@@ -3,11 +3,15 @@ data "aws_region" "current" {}
 locals {
   base_name         = "${var.name_prefix}-${var.os_key}"
 
+  # Resolved values for tags (never null/empty to avoid AWS tag validation errors)
+  ami_date_token    = var.ami_date_token != null ? var.ami_date_token : formatdate(var.ami_date_format, plantimestamp())
+  ami_release_version = var.ami_release_version != "" ? var.ami_release_version : "latest"
+
   # AMI name with optional release version. If ami_release_version is empty,
   # the build date provides uniqueness (e.g., -2611-20261110T005304Z).
   # If set (e.g., "1", "2"), it creates a version suffix (e.g., -2611.1-20261110T005304Z).
-  ami_name          = var.ami_release_version != "" ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}.${var.ami_release_version}-{{ imagebuilder:buildDate }}" : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}-{{ imagebuilder:buildDate }}"
-  ami_name_tag      = var.ami_release_version != "" ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}.${var.ami_release_version}" : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${var.ami_date_token}"
+  ami_name          = var.ami_release_version != "" ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}.${var.ami_release_version}-{{ imagebuilder:buildDate }}" : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}-{{ imagebuilder:buildDate }}"
+  ami_name_tag      = var.ami_release_version != "" ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}.${var.ami_release_version}" : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}"
   imagebuilder_tags = { for key, value in var.tags : key => value if lower(key) != "createdby" }
 
   # Recipes are immutable, so the name carries a hash of everything that defines
@@ -89,14 +93,14 @@ resource "aws_imagebuilder_distribution_configuration" "this" {
 
     ami_distribution_configuration {
       name               = local.ami_name
-      description        = "${var.display_name} golden image ${var.ami_date_token}.${var.ami_release_version}"
+      description        = "${var.display_name} golden image ${local.ami_date_token}.${local.ami_release_version}"
       kms_key_id         = var.ebs_encrypted ? var.kms_key_arn : null
       target_account_ids = length(var.target_account_ids) > 0 ? var.target_account_ids : null
       ami_tags = merge(var.tags, {
         Name        = local.ami_name_tag
         OS          = var.os_key
-        DateToken   = var.ami_date_token
-        Release     = var.ami_release_version
+        DateToken   = local.ami_date_token
+        Release     = local.ami_release_version
         GoldenImage = var.os_key
       })
     }

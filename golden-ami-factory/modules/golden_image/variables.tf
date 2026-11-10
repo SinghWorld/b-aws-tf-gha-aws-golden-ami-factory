@@ -38,13 +38,21 @@ variable "ami_architecture" {
 }
 
 variable "ami_date_token" {
-  description = "Dynamic YYMM token used in the published AMI name."
+  description = "Dynamic YYMM token used in the published AMI name. Null will be resolved to current date."
   type        = string
+  default     = null
+}
+
+variable "ami_date_format" {
+  description = "Terraform formatdate() pattern for the dynamic AMI date token."
+  type        = string
+  default     = "YYMM"
 }
 
 variable "ami_release_version" {
-  description = "Release suffix used after the YYMM token."
+  description = "Release suffix used after the YYMM token. Empty string will be resolved to 'latest'."
   type        = string
+  default     = ""
 }
 
 variable "parent_image_arn" {
