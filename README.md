@@ -45,39 +45,65 @@
 
 ```mermaid
 graph TB
-    subgraph MA[🟣 MANAGEMENT ACCOUNT<br/>373160674113]
-        IAM[👤 IAM User "Terraform"]
+    %% Management Account
+    subgraph MA["🟣 Management Account<br/>(373160674113)"]
+        IAMUser["👤 IAM User 'Terraform'"]
     end
-    
-    IAM -.->|AssumeRole| DA
-    
-    subgraph DA[🟠 DEVELOPMENT ACCOUNT<br/>732533289325<br/>BUILD ACCOUNT]
-        TFRole[🛡️ TerraformDeploymentRole]
-        Foundation[📦 Foundation Module<br/>IAM, SG, SNS]
-        Components[🔧 Components Module<br/>6 Custom Components]
-        GoldenImage[🏗️ Golden Image Module<br/>5 Pipelines]
-        
-        TFRole --> Foundation
-        TFRole --> Components
-        TFRole --> GoldenImage
+
+    %% Development Account (Build Account)
+    subgraph DA["🟠 Development Account<br/>(732533289325) - BUILD ACCOUNT"]
+        TFRole["🛡️ TerraformDeploymentRole"]
+        Foundation["📦 Foundation Module<br/>IAM, SG, SNS"]
+        Components["🔧 Components Module<br/>6 Custom Components"]
+        GoldenImage["🏗️ Golden Image Module<br/>5 Pipelines"]
     end
-    
-    GoldenImage -->|Cross-Account Distribution| TA1[🔵 TARGET 1: Production<br/>774133226694]
-    GoldenImage -->|Cross-Account Distribution| TA2[🟣 TARGET 2: Management<br/>373160674113]
-    GoldenImage -.->|Extensible| TA3[⚪ TARGET N: Future Accounts]
-    
-    subgraph TA1
-        AMI1[📦 Shared AMIs]
-        SSM1[📋 SSM Parameters]
-        KMS1[🔐 KMS Keys]
+
+    %% Target Accounts
+    subgraph TA1["🔵 Target 1: Production<br/>(774133226694)"]
+        AMI1["📦 Shared AMIs"]
+        SSM1["📋 SSM Parameters"]
+        KMS1["🔐 KMS Keys"]
     end
-    
-    subgraph TA2
-        AMI2[📦 Shared AMIs]
-        SSM2[📋 SSM Parameters]
-        KMS2[🔐 KMS Keys]
+
+    subgraph TA2["🟣 Target 2: Management<br/>(373160674113)"]
+        AMI2["📦 Shared AMIs"]
+        SSM2["📋 SSM Parameters"]
+        KMS2["🔐 KMS Keys"]
     end
+
+    subgraph TA3["⚪ Target N: Future Accounts"]
+        AMIN["📦 Shared AMIs"]
+        SSMN["📋 SSM Parameters"]
+    end
+
+    %% Connections
+    IAMUser -.->|AssumeRole<br/>sts:AssumeRole| TFRole
+    
+    TFRole --> Foundation
+    TFRole --> Components
+    TFRole --> GoldenImage
+    
+    GoldenImage -->|Cross-Account<br/>Distribution| TA1
+    GoldenImage -->|Cross-Account<br/>Distribution| TA2
+    GoldenImage -.->|Extensible| TA3
+    
+    %% Internal target account connections
+    AMI1 --- SSM1
+    AMI1 --- KMS1
+    AMI2 --- SSM2
+    AMI2 --- KMS2
+    AMIN --- SSMN
 ```
+
+### Architecture Flow
+
+| Step | Description |
+|------|-------------|
+| 1️⃣ | **Management Account** - IAM User "Terraform" assumes `TerraformDeploymentRole` |
+| 2️⃣ | **Development Account** - Terraform deploys Foundation, Components, Golden Image modules |
+| 3️⃣ | **Image Builder Pipelines** - Build hardened AMIs for 5 OS variants |
+| 4️⃣ | **Cross-Account Distribution** - AMIs automatically shared to target accounts |
+| 5️⃣ | **Target Accounts** - Receive shared AMIs + SSM parameters with latest AMI IDs |
 
 ### 📦 Key Modules
 
