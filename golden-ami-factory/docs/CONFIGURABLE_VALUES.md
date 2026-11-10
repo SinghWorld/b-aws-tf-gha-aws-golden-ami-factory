@@ -108,15 +108,24 @@ common_tags = {
 | `ami_architecture` | `string` | `"x86_64"` | Architecture token |
 | `ami_date_format` | `string` | `"YYMM"` | Date format (Terraform formatdate pattern) |
 | `ami_date_token` | `string` | `null` | Optional date override |
-| `ami_release_version` | `string` | `"1"` | Release version suffix |
+| `ami_release_version` | `string` | `""` (empty) | Release version suffix. Empty = use build timestamp for uniqueness |
 | `ssm_parameter_prefix` | `string` | `"/golden-ami"` | SSM parameter prefix |
 
 **Resulting AMI Name Pattern:**
+
+**With version (e.g., `ami_release_version = "1"`):**
 ```
 {ami_name_prefix}-{os_code}-{ami_architecture}-{ami_date_token}.{ami_release_version}-{buildDate}
 ```
+**Example:** `jq-golden-ami-rhel9-x86_64-2501.1-20250115T005304Z`
 
-**Example:** `jq-golden-ami-rhel9-x86_64-2501.1-20250115`
+**Without version (default, `ami_release_version = ""`):**
+```
+{ami_name_prefix}-{os_code}-{ami_architecture}-{ami_date_token}-{buildDate}
+```
+**Example:** `jq-golden-ami-rhel9-x86_64-2501-20250115T005304Z`
+
+> **Note:** The build timestamp (`{buildDate}`) is automatically appended by Image Builder and provides uniqueness for each build. Use `ami_release_version` when you want semantic versioning (e.g., bump to "2" for a major change).
 
 ---
 

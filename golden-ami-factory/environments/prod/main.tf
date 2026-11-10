@@ -44,6 +44,7 @@ module "golden_image" {
   ami_name_prefix               = var.ami_name_prefix
   ami_architecture              = var.ami_architecture
   ami_date_token                = local.ami_date_token
+  ami_date_format               = var.ami_date_format
   ami_release_version           = var.ami_release_version
   parent_image_arn              = each.value.parent_image_arn
   component_arns                = each.value.component_arns

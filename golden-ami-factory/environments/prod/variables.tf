@@ -147,13 +147,13 @@ variable "ami_date_token" {
 }
 
 variable "ami_release_version" {
-  description = "Release number appended after the monthly date token, e.g. 1 produces YYMM.1."
+  description = "Release number appended after the monthly date token (e.g. 1 produces YYMM.1). Set to empty string to omit version and use build timestamp only for uniqueness."
   type        = string
-  default     = "1"
+  default     = ""
 
   validation {
-    condition     = can(regex("^[0-9]+$", var.ami_release_version))
-    error_message = "ami_release_version must contain digits only."
+    condition     = var.ami_release_version == "" ? true : can(regex("^[0-9]+$", var.ami_release_version))
+    error_message = "ami_release_version must contain digits only, or be empty string."
   }
 }
 

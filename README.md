@@ -234,7 +234,7 @@ ebs_kms_key_alias       = "alias/aws/ebs"
 stig_level              = "medium"
 ami_name_prefix         = "jq-golden-ami"
 ami_architecture        = "x86_64"
-ami_release_version     = "1"
+ami_release_version     = ""   # Empty = use build timestamp for uniqueness; set to "1", "2" for versioning
 ssm_parameter_prefix    = "/golden-ami"
 
 # Target accounts for cross-account sharing
@@ -531,6 +531,8 @@ terraform apply
 | `images_to_retain` | number | `3` | AMIs to retain per OS |
 | `windows_instance_types` | list(string) | `["t3.large", "t3a.large"]` | Windows build instance types |
 | `linux_instance_types` | list(string) | `["t3.large", "t3a.large"]` | Linux build instance types |
+
+> **Note on AMI Naming:** The `ami_release_version` defaults to empty string (`""`), which means AMI names use the build timestamp for uniqueness (e.g., `jq-golden-ami-rhel9-x86_64-2511-20251110T005304Z`). To enable semantic versioning, set `ami_release_version = "1"` (or "2", "3" for subsequent releases), which produces names like `jq-golden-ami-rhel9-x86_64-2511.1-20251110T005304Z`.
 
 ### Component Chain Order (Built into Recipes)
 
