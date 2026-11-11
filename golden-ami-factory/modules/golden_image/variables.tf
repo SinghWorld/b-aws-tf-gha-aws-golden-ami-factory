@@ -85,7 +85,9 @@ variable "root_device_name" {
 }
 
 variable "root_volume_size" {
-  type = number
+  description = "Root volume size in GB. Set to null to use parent AMI's default size (recommended for RHEL/Linux)."
+  type        = number
+  default     = null
 }
 
 variable "ebs_encrypted" {

@@ -54,7 +54,7 @@ locals {
 
       # Optional fields with defaults
       stig_level                    = coalesce(config.stig_level, var.default_stig_level)
-      root_volume_size              = coalesce(config.root_volume_size, var.default_root_volume_size)
+      root_volume_size              = config.root_volume_size  # null if not specified in recipe (uses parent AMI default for Linux)
       root_device_name              = coalesce(config.root_device_name, "/dev/sda1")
       ebs_encrypted                 = coalesce(config.ebs_encrypted, false)
       kms_key_arn                   = config.kms_key_arn
