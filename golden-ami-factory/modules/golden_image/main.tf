@@ -17,6 +17,11 @@ locals {
   # Recipes are immutable, so the name carries a hash of everything that defines
   # the recipe. Any change produces a fresh recipe instead of a version clash.
   recipe_hash = substr(sha1(jsonencode([var.parent_image_arn, var.component_arns, var.stig_level, var.root_volume_size, var.ebs_encrypted, var.kms_key_arn])), 0, 8)
+
+  # Flag to determine if block_device_mapping should be explicitly set
+  # When false (for Linux/RHEL with no explicit size), Image Builder uses parent AMI's default
+  # When true (for Windows or when explicitly specified), we set the explicit volume size
+  use_explicit_volume = var.root_volume_size != null && var.root_volume_size > 0
 }
 
 resource "aws_imagebuilder_image_recipe" "this" {
@@ -26,14 +31,19 @@ resource "aws_imagebuilder_image_recipe" "this" {
   description  = "${var.display_name} golden image recipe"
   tags         = var.tags
 
-  block_device_mapping {
-    device_name = var.root_device_name
-    ebs {
-      delete_on_termination = true
-      encrypted             = var.ebs_encrypted
-      kms_key_id            = var.ebs_encrypted ? var.kms_key_arn : null
-      volume_size           = var.root_volume_size
-      volume_type           = "gp3"
+  # For Linux/RHEL: omit block_device_mapping to use parent AMI's default root volume size
+  # For Windows: explicitly set block_device_mapping with specified root_volume_size
+  dynamic "block_device_mapping" {
+    for_each = local.use_explicit_volume ? [true] : []
+    content {
+      device_name = var.root_device_name
+      ebs {
+        delete_on_termination = true
+        encrypted             = var.ebs_encrypted
+        kms_key_id            = var.ebs_encrypted ? var.kms_key_arn : null
+        volume_size           = var.root_volume_size
+        volume_type           = "gp3"
+      }
     }
   }
 

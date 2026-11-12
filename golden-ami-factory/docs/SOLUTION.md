@@ -1,6 +1,6 @@
 # 🏗️ Multi-Account Golden AMI Factory - Enterprise Solution Design
 
-> **Version:** 2.1 | **Last Updated:** 2025-11-09 | **Author:** Platform Engineering  
+> **Version:** 2.2 | **Last Updated:** 2025-11-10 | **Author:** Platform Engineering  
 > **Classification:** Internal - Platform Team
 
 ---
@@ -15,6 +15,7 @@ This document outlines the architecture for distributing hardened, compliant Gol
 | **Encryption** | Disabled (AWS managed KMS) | Customer managed KMS (when enabled) |
 | **Compliance** | STIG High (CIS Level 2) | Configurable per account/OS |
 | **Automation** | Monthly scheduled + manual | Event-driven + scheduled |
+| **AMI Versioning** | Build timestamp (default) | Optional semantic versioning |
 
 ---
 
@@ -31,6 +32,7 @@ This document outlines the architecture for distributing hardened, compliant Gol
 | ![Lifecycle](https://img.shields.io/badge/Lifecycle_Policies-Active-brightgreen) | **Working** | Retains 3 AMIs per OS (configurable) |
 | ![STIG](https://img.shields.io/badge/STIG_Compliance-High-brightgreen) | **Working** | Configurable: low/medium/high |
 | ![Security](https://img.shields.io/badge/Security_Group-Drift_Free-brightgreen) | **Fixed** | Uses `aws_security_group_rule` resources |
+| ![Tags](https://img.shields.io/badge/AMI_Tags-Null_Fixed-brightgreen) | **Fixed** | Tags resolve to "latest" or current date |
 
 ### 📊 Current Configuration
 
@@ -73,7 +75,7 @@ This document outlines the architecture for distributing hardened, compliant Gol
 |--------|----------------|
 | ![Target](https://img.shields.io/badge/Target_Accounts-Static_List-blue) | `target_account_ids` variable (easily extensible) |
 | ![Globe](https://img.shields.io/badge/Regions-Single_Region-blue) | Source region only - multi-region planned |
-| ![Tag](https://img.shields.io/badge/AMI_Naming-Patternized-blue) | `{prefix}-{os}-{arch}-{YYMM}.{release}-{buildDate}` |
+| ![Tag](https://img.shields.io/badge/AMI_Naming-Patternized-blue) | `{prefix}-{os}-{arch}-{YYMM}[.{release}]-{buildDate}` |
 | ![Share](https://img.shields.io/badge/Launch_Permissions-Auto_Managed-blue) | Automatically managed by Image Builder |
 
 ### 2.4 SSM Parameter Store Replication
@@ -104,6 +106,7 @@ This document outlines the architecture for distributing hardened, compliant Gol
 | ![Hash](https://img.shields.io/badge/Component_Versioning-Content_Hashed-brightgreen) | Immutable via content hash |
 | ![IMDS](https://img.shields.io/badge/IMDSv2-Enforced-brightgreen) | On all build instances |
 | ![Lock](https://img.shields.io/badge/Encryption-Optional-blue) | Disabled by default |
+| ![Tags](https://img.shields.io/badge/AMI_Tags-Null_Safe-brightgreen) | Tags never null; resolve to "latest" or date |
 
 ---
 
@@ -216,6 +219,20 @@ dynamic "statement" {
 **File:** `modules/golden_image/main.tf`
 
 ```hcl
+locals {
+  # Resolved values for tags (never null/empty to avoid AWS tag validation errors)
+  ami_date_token     = var.ami_date_token != null ? var.ami_date_token : formatdate(var.ami_date_format, plantimestamp())
+  ami_release_version = var.ami_release_version != "" ? var.ami_release_version : "latest"
+  
+  # AMI name with optional release version
+  ami_name = var.ami_release_version != "" 
+    ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}.${var.ami_release_version}-{{ imagebuilder:buildDate }}"
+    : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}-{{ imagebuilder:buildDate }}"
+  ami_name_tag = var.ami_release_version != ""
+    ? "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}.${var.ami_release_version}"
+    : "${var.ami_name_prefix}-${var.ami_os_code}-${var.ami_architecture}-${local.ami_date_token}"
+}
+
 distribution {
   region = data.aws_region.current.region
 
@@ -225,6 +242,8 @@ distribution {
     ami_tags = merge(var.tags, {
       Name        = local.ami_name_tag
       OS          = var.os_key
+      DateToken   = local.ami_date_token
+      Release     = local.ami_release_version
       GoldenImage = var.os_key
     })
   }
@@ -289,7 +308,7 @@ accounts:
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| **Phase 1** | ✅ **Complete** | Stable multi-account (2 targets), SSM replication, lifecycle policies, SG egress fix, Recipe registry |
+| **Phase 1** | ✅ **Complete** | Stable multi-account (2 targets), SSM replication, lifecycle policies, SG egress fix, Recipe registry, Tag null fix |
 | **Phase 2** | 🔄 **Planned** | Encryption support: customer managed KMS, cross-account key policies, encrypted distribution |
 | **Phase 3** | 📋 **Future** | Dynamic configuration: `accounts.yaml` schema, per-account retention/CIS overrides |
 | **Phase 4** | 📋 **Future** | Observability: Central EventBridge, CloudWatch dashboards, build failure alerting |
@@ -318,6 +337,7 @@ accounts:
 - ✅ ExternalId for cross-account trust
 - ✅ STIG hardening (configurable level)
 - ✅ Component immutability via content hashing
+- ✅ AMI tags never null (resolved to "latest" or date)
 - ⬜ KMS encryption (when enabled)
 - ⬜ VPC endpoints for KMS/S3/SSM
 - ⬜ CloudTrail logging in all accounts
@@ -355,8 +375,9 @@ golden-ami-factory/
 | 2025-11-06 | Static `target_account_ids` list | Simple, works for 2-5 accounts; migrate to YAML when needed |
 | 2025-11-06 | Single region (ap-southeast-2) | Current requirement; multi-region planned |
 | 2025-11-06 | STIG default: high | Enterprise compliance baseline |
-
----
+| 2025-11-10 | AMI versioning defaults to build timestamp | Avoids hardcoded version; allows optional semantic versioning |
+| 2025-11-10 | AMI tags resolve null values | Prevents "Tag value cannot be null" distribution errors |
+| 2025-11-11 | RHEL root_volume_size omitted | Uses parent AMI default size; avoids additional 100GB volume |
 
 ## ✅ Next Steps
 
@@ -370,9 +391,9 @@ golden-ami-factory/
 
 <div align="center">
 
-**📄 Document Version: 2.1**  
+**📄 Document Version: 2.2**  
 **👤 Author: Platform Engineering**  
-**📅 Last Updated: 2025-11-09**  
+**📅 Last Updated: 2025-11-10**  
 **🏷️ Classification: Internal - Platform Team**
 
 </div>

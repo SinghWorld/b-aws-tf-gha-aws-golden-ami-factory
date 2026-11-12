@@ -1,6 +1,6 @@
 # 🔄 Cross-Account AMI Sharing - Enterprise Guide
 
-> **Version:** 2.1 | **Last Updated:** 2025-11-09 | **Author:** Platform Engineering
+> **Version:** 2.2 | **Last Updated:** 2025-11-10 | **Author:** Platform Engineering
 
 ---
 
@@ -27,12 +27,25 @@ This project uses **AWS EC2 Image Builder's native cross-account distribution** 
 The `golden_image` module's `aws_imagebuilder_distribution_configuration` handles everything automatically:
 
 ```hcl
+locals {
+  # Resolved values for tags (never null/empty to avoid AWS tag validation errors)
+  ami_date_token     = var.ami_date_token != null ? var.ami_date_token : formatdate(var.ami_date_format, plantimestamp())
+  ami_release_version = var.ami_release_version != "" ? var.ami_release_version : "latest"
+}
+
 resource "aws_imagebuilder_distribution_configuration" "this" {
   distribution {
     region = data.aws_region.current.region
     
     ami_distribution_configuration {
       target_account_ids = var.target_account_ids  # <-- Shares AMI with these accounts
+      ami_tags = merge(var.tags, {
+        Name        = local.ami_name_tag
+        OS          = var.os_key
+        DateToken   = local.ami_date_token
+        Release     = local.ami_release_version
+        GoldenImage = var.os_key
+      })
     }
     
     # SSM parameter in build account
@@ -329,6 +342,20 @@ Ensure each target account has:
 - ExternalId: `imagebuilder-distribution`
 - Attached policy: `EC2ImageBuilderDistributionCrossAccountRolePolicy`
 
+### Distribution Tag Null Error (FIXED)
+
+**Error:** `Tag value cannot be null. Use empty string instead.`
+
+**Root Cause:** `ami_date_token` defaulted to `null`, `ami_release_version` defaulted to `""` - passed directly to AMI tags.
+
+**Fix Applied:** Local values now resolve null/empty:
+```hcl
+ami_date_token     = var.ami_date_token != null ? var.ami_date_token : formatdate(var.ami_date_format, plantimestamp())
+ami_release_version = var.ami_release_version != "" ? var.ami_release_version : "latest"
+```
+
+**Result:** Tags now always have valid values (`DateToken = "2611"`, `Release = "latest"`).
+
 ---
 
 ## 🚀 Future Enhancement: `accounts.yaml` (Planned)
@@ -365,8 +392,8 @@ This will replace static `target_account_ids` with a declarative account registr
 
 <div align="center">
 
-**📄 Document Version: 2.1**  
+**📄 Document Version: 2.2**  
 **👤 Author: Platform Engineering**  
-**📅 Last Updated: 2025-11-09**
+**📅 Last Updated: 2025-11-10**
 
 </div>

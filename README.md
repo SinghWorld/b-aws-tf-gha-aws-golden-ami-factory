@@ -385,7 +385,8 @@ parent_image_arn: "${aws_managed_components_prefix}:image/red-hat-enterprise-lin
 stig_component_arn: "${aws_managed_components_prefix}:component/stig-build-linux/x.x.x"
 stig_level: "high"
 
-root_volume_size: 100
+# For RHEL/Linux: Omit root_volume_size to use parent AMI's default size
+# root_volume_size: 100
 root_device_name: "/dev/xvda"
 ebs_encrypted: false
 kms_key_arn: ""
@@ -420,6 +421,8 @@ tags:
   OSFamily: "Linux"
   BaseOS: "RHEL-9"
 ```
+
+> **Note:** For RHEL/Linux recipes, `root_volume_size` is intentionally omitted to use the parent AMI's default root volume size. For Windows recipes, explicitly set `root_volume_size: 100`.
 
 ### Step 2: Register in Index
 
@@ -481,7 +484,7 @@ terraform apply
 | `parent_image_arn` | Yes | string | Base image ARN (supports `${aws_managed_components_prefix}`) |
 | `stig_component_arn` | Yes | string | STIG component ARN (supports template vars) |
 | `stig_level` | No | string | `low`, `medium`, `high` (default: `medium`) |
-| `root_volume_size` | No | number | Root volume in GB (default: 100) |
+| `root_volume_size` | No | number | **Root volume in GB. Omit for Linux/RHEL to use parent AMI default. Explicit for Windows (default: 100).** |
 | `root_device_name` | No | string | `/dev/xvda` (Linux) or `/dev/sda1` (Windows) |
 | `ebs_encrypted` | No | bool | Enable EBS encryption (default: false) |
 | `kms_key_arn` | No | string | KMS key ARN if encrypted |
@@ -491,6 +494,11 @@ terraform apply
 | `distribution_regions` | No | list(string) | Additional regions |
 | `lifecycle_policy_count` | No | number | AMIs to retain (default: 3) |
 | `tags` | No | map(string) | Additional tags |
+
+> **Note on `root_volume_size`:**
+> - **Linux/RHEL:** Omit this field entirely to use the parent AMI's default root volume size. This avoids creating an additional EBS volume.
+> - **Windows:** Explicitly set this field (e.g., `100`) to define the root volume size.
+> - When omitted, the value is `null` and Image Builder uses the parent AMI's default root volume configuration.
 
 **Component Chain Object:**
 ```yaml
@@ -625,6 +633,7 @@ aws s3 ls s3://jcp-infra-nonprod/imagebuilder-logs/jq-golden-ami-rhel-9/
 | **KMS errors** | AWS managed key used for encryption | Use customer managed key; add cross-account permissions |
 | **SSM parameter missing** | Execution role lacks permissions | Check `ssm:PutParameter` in execution role policy |
 | **Profile issues** | Wrong AWS CLI profile | Use `development` profile with `source_profile = default` |
+| **Distribution tag error** | Null tag values passed to AMI | Fixed: tags now resolve to "latest" or current date |
 
 ### Debug Commands
 
@@ -783,6 +792,7 @@ b-aws-tf-gha-aws-golden-ami-factory/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2 | 2025-11-10 | Fixed distribution tag null error; AMI versioning defaults to build timestamp |
 | 2.1 | 2025-11-09 | Updated all docs with attractive formatting, AWS icons, mermaid diagrams |
 | 2.0 | 2025-11-09 | Added recipe registry, GitOps onboarding, enterprise docs |
 | 1.0 | 2025-11-06 | Initial release with 5 OS pipelines |
