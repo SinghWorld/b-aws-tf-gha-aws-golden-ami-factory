@@ -377,8 +377,7 @@ golden-ami-factory/
 | 2025-11-06 | STIG default: high | Enterprise compliance baseline |
 | 2025-11-10 | AMI versioning defaults to build timestamp | Avoids hardcoded version; allows optional semantic versioning |
 | 2025-11-10 | AMI tags resolve null values | Prevents "Tag value cannot be null" distribution errors |
-
----
+| 2025-11-11 | RHEL root_volume_size omitted | Uses parent AMI default size; avoids additional 100GB volume |
 
 ## ✅ Next Steps
 

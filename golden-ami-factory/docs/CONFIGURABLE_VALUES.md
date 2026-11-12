@@ -163,11 +163,15 @@ common_tags = {
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `default_root_volume_size` | `number` | `100` | Default root volume size (GB) |
+| `default_root_volume_size` | `number` | `100` | Default root volume size (GB) for Windows recipes. **Not used for RHEL/Linux** (they omit `root_volume_size` to use parent AMI default). |
 | `default_lifecycle_policy_count` | `number` | `3` | Default AMIs to retain per OS |
 | `default_stig_level` | `string` | `"high"` | Default STIG level |
 
-> These are used as defaults in recipe YAML files and can be overridden per-recipe.
+> **Important:** For RHEL 8/9/10 recipes, `root_volume_size` is intentionally **omitted** in the YAML files. This allows AWS Image Builder to use the parent AMI's default root volume size, avoiding the creation of an additional 100GB EBS volume. The `default_root_volume_size` variable serves as:
+> - Explicit default for Windows recipes (which specify `root_volume_size: ${default_root_volume_size}`)
+> - Fallback for any new recipe templates
+> 
+> Windows recipes (2022/2025) explicitly set `root_volume_size: ${default_root_volume_size}` (100GB).
 
 ---
 

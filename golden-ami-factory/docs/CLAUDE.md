@@ -247,6 +247,11 @@ enable_stig = true
 component_version = "1.0.0"
 ```
 
+> **Note on Root Volume Size:**
+> - **RHEL/Linux recipes** intentionally **omit** `root_volume_size` to use the parent AMI's default root volume size. This avoids creating an additional 100GB EBS volume during AMI build.
+> - **Windows recipes** explicitly set `root_volume_size: 100` in their YAML definitions.
+> - The `default_root_volume_size = 100` variable is only used as a fallback default for Windows recipes and new recipe templates.
+
 ---
 
 ## 📦 Component Chain Order
